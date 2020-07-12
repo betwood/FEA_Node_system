@@ -34,10 +34,6 @@ class NodeInput(Node, NodeBase):
         # col.prop_search(self, "object", context.scene, "objects")
         pass
 
-    def draw_buttons_ext(self, context, layout):
-        # layout.label(text=str(self.object))
-        pass
-
     def get_object(self):
         print(self.object)
         return self.object

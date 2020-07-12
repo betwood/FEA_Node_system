@@ -21,8 +21,7 @@ class NodeBase:
     # These work just like custom properties in ID data blocks
     # Extensive information can be found under
     # http://wiki.blender.org/index.php/Doc:2.6/Manual/Extensions/Python/Properties
-    my_string_prop: bpy.props.StringProperty()
-    my_float_prop: bpy.props.FloatProperty(default=3.1415926)
+    object: bpy.props.PointerProperty(type=bpy.types.Object)
 
     # === Optional Functions ===
     # Initialization function, called when a new node is created.
@@ -59,8 +58,28 @@ class NodeBase:
         # layout.prop(self, "my_float_prop")
         # # my_string_prop button will only be visible in the sidebar
         # layout.prop(self, "my_string_prop")
+        layout.label(text=str(self.object))
         pass
 
     def get_value(self, socket):
-        socket.links[0].from_node.eval()
-        return socket.links[0].from_socket.default_value
+        if not socket.is_linked:
+            val = socket.default_value
+        else:
+            socket.links[0].from_node.eval()
+            val = socket.links[0].from_socket.default_value
+        return val
+
+    def set_object(self, socket, object, type):
+        if type == "in":
+            from_node = socket.links[0].from_node
+            from_node.object = object
+            for input in self.inputs:
+                print(input)
+                if input.is_linked:
+                    from_node.set_object(input, self.object, "in")
+        if type == "out":
+            to_node = socket.links[0].to_node
+            to_node.object = object
+            for output in self.outputs:
+                if output.is_linked:
+                    to_node.set_object(output, self.object, "out")

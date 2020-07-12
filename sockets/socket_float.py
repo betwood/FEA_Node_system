@@ -13,5 +13,5 @@ class FloatSocket(NodeSocket, SocketBase):
     # define color
     color = (1.0, 0.4, 0.216, 0.5)
 
-    default_value = bpy.props.FloatProperty()
+    default_value: bpy.props.FloatProperty(default=0)
     default_type: bpy.props.StringProperty(default="NUMBER")

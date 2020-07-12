@@ -33,7 +33,7 @@ class NodeSpaceTruss(Node, NodeBase):
     #     default = 'ADD',
     # )
 
-    E: bpy.props.FloatProperty(default=210000000000)
+    E: bpy.props.FloatProperty(default=21000000)
     A: bpy.props.FloatProperty(default=.1)
     object: bpy.props.PointerProperty(type=Object)
     
@@ -42,7 +42,7 @@ class NodeSpaceTruss(Node, NodeBase):
         self.outputs.new('SocketTypeMatrix', "Output")
         self.inputs.new('SocketTypeFloat', "E").init("E")
         self.inputs.new('SocketTypeFloat', "A").init("A")
-        self.inputs.new('SocketTypeObject', "Object")
+        self.inputs.new('SocketTypeObject', "Object").init("object")
         self.inputs.new('SocketTypeMatrix', "Boundary conditions")
         self.inputs.new('SocketTypeMatrix', "Forces")
 
@@ -58,26 +58,22 @@ class NodeSpaceTruss(Node, NodeBase):
         layout.operator("node.object_update", text="update objects")
         layout.label(text=str(self.object))
 
-    def get_object(self):
-        print(self.object)
-        return self.object
-
     def update_value(self, context):
         print("updated")
 
     def update_object(self):
         input_object = self.inputs["Object"]
-        self.object = self.get_value(input_object, "object")
+        self.object = self.get_value(input_object)
         print(self.object)
         for input in self.inputs:
             if input.is_linked:
                 self.set_object(input, self.object, "in")
-                print(input)
+                if DEBUG: print(input)
 
         for output in self.outputs:
             if output.is_linked:
                 self.set_object(output, self.object, "out")
-                print(output)
+                if DEBUG: print(output)
         # self.get_object()
 
 

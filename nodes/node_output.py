@@ -24,7 +24,7 @@ class NodeOutput(Node, NodeBase):
     
     
     def init(self, context):
-        self.inputs.new('SocketTypeFloat', "Value")
+        self.inputs.new('SocketTypeGeneric', "print output")
 
 
     def draw_buttons(self, context, layout):
@@ -50,7 +50,7 @@ class NodeOutput(Node, NodeBase):
 
         input_socket_1 = self.inputs[0]
 
-        # input_socket_1.set_value(self.E)
+        input_socket_1.set_value(self.output)
         # input_socket_2.set_value(self.A)
 
         # get inputs from previous nodes
