@@ -11,5 +11,5 @@ class MatrixSocket(NodeSocket, SocketBase):
     # define color
     color = (0.0, 0.4, 1.0, 0.5)
 
-    default_value: bpy.props.StringProperty()
+    default_value: bpy.props.StringProperty(default="[]")
     # default_type: bpy.props.StringProperty(default="NUMBER")

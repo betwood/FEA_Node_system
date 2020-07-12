@@ -61,12 +61,16 @@ class NodeBase:
         layout.label(text=str(self.object))
         pass
 
-    def get_value(self, socket):
+    def get_value(self, socket, type="default"):
         if not socket.is_linked:
             val = socket.default_value
         else:
-            socket.links[0].from_node.eval()
-            val = socket.links[0].from_socket.default_value
+            val = socket.links[0].from_node.eval()
+            # if not type == "matrix":
+            #     socket.links[0].from_node.eval()
+            #     val = socket.links[0].from_socket.default_value
+            # else:
+                
         return val
 
     def set_object(self, socket, object, type):
