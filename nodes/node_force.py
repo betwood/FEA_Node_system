@@ -31,7 +31,6 @@ class ForceInput(Node, NodeBase):
 
 
     def draw_buttons(self, context, layout):
-        row = layout.row()
         if not self.object == None:
             col = layout.column()
             col.prop_search(self, "vertex_group", self.object, "vertex_groups")
@@ -53,11 +52,11 @@ class ForceInput(Node, NodeBase):
         max = len(self.object.data.vertices) * 3
         Force=np.zeros((3,1))
         F = np.zeros((max,1))
-
+        gi = self.object.vertex_groups[self.vertex_group].index
         i = 0
         for v in self.object.data.vertices:
             for g in v.groups:
-                if g.group == 1: # currently using vetex group 0 for fixed boundary conditions
+                if g.group == gi: # currently using vetex group 0 for fixed boundary conditions
                     # any vertex that is a fixed boundary condition is set to 1
                     F[i] = self.vector[0]
                     F[i + 1] = self.vector[1]

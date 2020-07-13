@@ -6,29 +6,28 @@ import mathutils
 
 from bpy.types import NodeTree, Node, NodeSocket, Object, Operator
 from .node_base import NodeBase
+from .node_output import UpdateObjectNodeOperator
 # from ..sockets.socket_object import SocketObject
 # from ..sockets.socket_matrix import SocketMatrix
 
 DEBUG = False
 
-class NodeOutput(Node, NodeBase):
+class NodeShapekeyOutput(Node, NodeBase):
 
     # Optional identifier string. If not explicitly defined, the python class name is used.
-    bl_idname = 'OutputNode'
+    bl_idname = 'OutputShapekeyNode'
     # Label for nice name display
-    bl_label = "Generic Output"
+    bl_label = "Shapekey Output"
 
 
-    output: bpy.props.StringProperty(default="")
-    object: bpy.props.PointerProperty(type=Object)
-    
+    sk_index: bpy.props.IntProperty(min=0, max=5)
     
     def init(self, context):
-        self.inputs.new('SocketTypeGeneric', "print output")
+        self.inputs.new('SocketTypeMatrix', "output")
 
 
     def draw_buttons(self, context, layout):
-        layout.label(text=self.output)
+        layout.prop(self, "sk_index", text="shape key index")
         # self.eval()
         # col = layout.column()
         # col.prop_search(self, "object", context.scene, "objects")
@@ -47,29 +46,24 @@ class NodeOutput(Node, NodeBase):
         print("updated")
 
     def eval(self):
-
+        # set sockets
         input_socket_1 = self.inputs[0]
 
-        input_socket_1.set_value(self.output)
-        # input_socket_2.set_value(self.A)
-
         # get inputs from previous nodes
-        self.output = str(self.get_value(input_socket_1))
-        print(self.output)
+        U = self.get_value(input_socket_1)
+        print(U)
+
+        # get basis shape key
+        self.object.active_shape_key_index = 0
+        sk_basis = self.object.active_shape_key
+
+        # make active shape key the index value and select it
+        self.object.active_shape_key_index = self.sk_index
+        sk = self.object.active_shape_key
+
+
+        #apply to mesh
+        for i in range(len(self.object.data.vertices)):
+            sk.data[i].co = sk_basis.data[i].co + mathutils.Vector((U[3*i], U[3*i+1], U[3*i+2]))
+
         return
-
-
-class UpdateObjectNodeOperator(Operator):
-    """Add a simple box mesh"""
-    bl_idname = "node.evaluate"
-    bl_label = "evaluate"
-
-    # node_group_name = StringProperty()
-
-    node = None
-
-    def execute(self, context):
-        # node = [i for i in bpy.data.node_groups[bpy.context.space_data.node_tree.name].nodes if i.bl_idname == "Outputnode"][0]
-        node = context.active_node
-        node.eval()
-        return{'FINISHED'}

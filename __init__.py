@@ -53,7 +53,7 @@ node_categories = [
         NodeItem("ForceNode"),
         NodeItem("CombineBCSNode"),
         NodeItem("CombineForcesNode"),
-        NodeItem("OutputShapekeynode"),
+        NodeItem("OutputShapekeyNode"),
     ]),
     # solvers
     MyNodeCategory('SOLVERS', "solvers", items=[

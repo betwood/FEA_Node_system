@@ -14,6 +14,5 @@ class VectorSocket(NodeSocket, SocketBase):
     default_value: bpy.props.FloatVectorProperty()
     # default_type: bpy.props.StringProperty(default="NUMBER")
 
-    # def draw_layout(self, context, layout, node, text):
-    #     col = layout.column()
-    #     col.prop_search(self, "default_value", context.scene, "objects", text="")
+    def draw_layout(self, context, layout, node, text):
+        layout.column().prop(node, self.default_prop, text=text)

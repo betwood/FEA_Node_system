@@ -196,68 +196,55 @@ class NodeSpaceTruss(Node, NodeBase):
         max = (edge_matrix[:,1:].max() + 1) * 3
         if DEBUG: print(max)
 
-        # create element stiffness matrices
-
-
-        # k=SpaceTrussElementStiffness(properties[0, 0],properties[0, 1],properties[0, 2],properties[0, 3],properties[0, 4],properties[0, 5])
-        # print(k)
-
-        # k=SpaceTrussElementStiffness(properties[1, 0],properties[1, 1],properties[1, 2],properties[1, 3],properties[1, 4],properties[1, 5])
-        # print(k)
-        # print(properties[1][:])
-        if DEBUG: print('break')
-
+        # create stiffness matrix
         k = np.zeros((len(edge_matrix),6,6))
         for i in range(len(edge_matrix)):
             k[i, :, :]=self.SpaceTrussElementStiffness(properties[i, 0],properties[i, 1],properties[i, 2],properties[i, 3],properties[i, 4],properties[i, 5])
-            # print(k)
         if DEBUG: print(k.shape)
 
         # create global stiffness matrix
         K=np.zeros((max,max))
         for i in range(len(edge_matrix)):
             K=self.SpaceTrussAssemble(K,k[i, :, :],edge_matrix[i,1],edge_matrix[i,2])
-        # K=SpringAssemble(K,k2,1,2)
         if DEBUG: print(K.shape)
         if DEBUG: print(K)
 
-        # create force vector
-        Force=np.zeros((3,1))
-        F = np.zeros((max,1))
-        Force=np.array([[0],[0],[-1000000]])
-        if DEBUG: print(F)
+        # # create force vector
+        # Force=np.zeros((3,1))
+        # F = np.zeros((max,1))
+        # Force=np.array([[0],[0],[-1000000]])
+        # if DEBUG: print(F)
 
 
-        if DEBUG: print('testing')
-        # look at vertex group for boundary conditions
-        vg_idx = 0
-        vs = np.zeros((max,1))
-        if DEBUG: print(vs.shape)
-        i = 0
+        # if DEBUG: print('testing')
+        # # look at vertex group for boundary conditions
+        # vg_idx = 0
+        # vs = np.zeros((max,1))
+        # if DEBUG: print(vs.shape)
+        # i = 0
 
 
 
-        for v in ob.vertices:
-            for g in v.groups:
-                if g.group == 0: # currently using vetex group 0 for fixed boundary conditions
-                    # any vertex that is a fixed boundary condition is set to 1
-                    vs[i] = 1
-                    vs[i + 1] = 1
-                    vs[i + 2] = 1
-                if g.group == 1:
-                    # any vetex with a force on it is set to 2
-                    F[i] = Force[0]
-                    F[i + 1] = Force[1]
-                    F[i + 2] = Force[2]
+        # for v in ob.vertices:
+        #     for g in v.groups:
+        #         if g.group == 0: # currently using vetex group 0 for fixed boundary conditions
+        #             # any vertex that is a fixed boundary condition is set to 1
+        #             vs[i] = 1
+        #             vs[i + 1] = 1
+        #             vs[i + 2] = 1
+        #         if g.group == 1:
+        #             # any vetex with a force on it is set to 2
+        #             F[i] = Force[0]
+        #             F[i + 1] = Force[1]
+        #             F[i + 2] = Force[2]
                         
-            i += 3 # i moves up by 3 because 3 dof per vertex
-        bool = ((vs == 0))
-        bool = np.ravel(bool)
-        print("bool before", bool)
+        #     i += 3 # i moves up by 3 because 3 dof per vertex
+        # bool = ((vs == 0))
+        # bool = np.ravel(bool)
+        # print("bool before", bool)
         bool = ((self.get_value(input_socket_4)))
         
         F = self.get_value(input_socket_5)
-        if DEBUG: print(vs)
         print("Force:", F)
         # bool = np.reshape(bool, (12,))
         # bool = np.ix_(bool)
@@ -270,10 +257,10 @@ class NodeSpaceTruss(Node, NodeBase):
         if DEBUG: print(boolv)
 
         if DEBUG: print(K.shape)
-        if DEBUG: print(vs.shape)
+        # if DEBUG: print(vs.shape)
 
-        vstest = vs[bool]
-        if DEBUG: print(vstest)
+        # vstest = vs[bool]
+        # if DEBUG: print(vstest)
 
         # apply boundary conditions
         Ksolve = K[boolv,boolh]
