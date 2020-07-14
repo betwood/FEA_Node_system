@@ -57,16 +57,16 @@ node_categories = [
     ]),
     # solvers
     MyNodeCategory('SOLVERS', "solvers", items=[
-        NodeItem("SpaceFrameNode"),
         NodeItem("SpaceTrussNode"),
+        NodeItem("SpaceFrameNode"),
     ]),
 ]
 
 
 def register():
     auto_load.register()
-    nodeitems_utils.register_node_categories('FEA_NODES', node_categories)
+    nodeitems_utils.register_node_categories('FEA_NODES_categories', node_categories)
 
 def unregister():
     auto_load.unregister()
-    nodeitems_utils.unregister_node_categories('FEA_NODES')
+    nodeitems_utils.unregister_node_categories('FEA_NODES_categories')

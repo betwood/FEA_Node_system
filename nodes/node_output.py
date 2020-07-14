@@ -35,8 +35,8 @@ class NodeOutput(Node, NodeBase):
         pass
 
     def draw_buttons_ext(self, context, layout):
+        super().draw_buttons_ext(context, layout)
         layout.operator("node.evaluate", text="evaluate")
-        layout.label(text=str(self.object))
         pass
 
     def get_object(self):

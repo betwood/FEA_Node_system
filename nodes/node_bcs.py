@@ -24,6 +24,10 @@ class BCInput(Node, NodeBase):
     x: bpy.props.BoolProperty(default=True)
     y: bpy.props.BoolProperty(default=True)
     z: bpy.props.BoolProperty(default=True)
+    mom_x: bpy.props.BoolProperty(default=True)
+    mom_y: bpy.props.BoolProperty(default=True)
+    mom_z: bpy.props.BoolProperty(default=True)
+    max_mult: bpy.props.IntProperty(default=3)
 
     
     
@@ -39,6 +43,11 @@ class BCInput(Node, NodeBase):
         row.prop(self, "x", text="x", toggle=True)
         row.prop(self, "y", text="y", toggle=True)
         row.prop(self, "z", text="z", toggle=True)
+        row = layout.row()
+        if self.solve_type == "1DFRAME":
+            row.prop(self, "mom_x", text="x", toggle=True)
+            row.prop(self, "mom_y", text="y", toggle=True)
+            row.prop(self, "mom_z", text="z", toggle=True)
         pass
 
     # def get_object(self):
@@ -51,8 +60,13 @@ class BCInput(Node, NodeBase):
     def eval(self):
         
         # look at vertex group for boundary conditions
+        if self.solve_type == "1DFRAME":
+            self.max_mult = 6
+        else:
+            self.max_mult = 3
+        
         vg_idx = 0
-        max = len(self.object.data.vertices) * 3
+        max = len(self.object.data.vertices) * self.max_mult
         vs = np.zeros((max,1))
         i = 0
         gi = self.object.vertex_groups[self.vertex_group].index
@@ -65,8 +79,16 @@ class BCInput(Node, NodeBase):
                     if self.y == True:
                         vs[i + 1] = 1
                     if self.z == True:
-                        vs[i + 2] = 1             
-            i += 3 # i moves up by 3 because 3 dof per vertex
-        bool = ((vs == 0))
+                        vs[i + 2] = 1
+                    if self.solve_type == "1DFRAME":
+                        if self.mom_x == True:
+                            vs[i + 3] = 1
+                        if self.mom_y == True:
+                            vs[i + 4] = 1
+                        if self.mom_z == True:
+                            vs[i + 5] = 1
 
+            i += self.max_mult # i moves up by 3 because 3 dof per vertex
+        bool = ((vs == 0))
+        print(bool.shape)
         return bool

@@ -3,6 +3,7 @@ from bpy.props import *
 
 class SocketBase:
     default_prop: StringProperty()
+    is_shown: BoolProperty(default=True)
 
     def init(self, default_prop=""):
         self.default_prop = default_prop
@@ -14,14 +15,19 @@ class SocketBase:
         layout.prop(node, self.default_prop, text=text)
 
     def draw(self, context, layout, node, text):
-        if self.is_output:
-            layout.label(text=text)
-        else:
-            if self.is_linked or self.default_prop == "":
-                layout.label(text=text + str(self.default_prop))
+        if self.is_shown == True:
+            if self.is_output:
+                layout.label(text=text)
             else:
-                self.draw_layout(context, layout, node, text)
+                if self.is_linked or self.default_prop == "":
+                    layout.label(text=text + str(self.default_prop))
+                else:
+                    self.draw_layout(context, layout, node, text)
 
 
     def set_value(self, value):
         self.default_value = value
+
+    def show(self, type):
+        print(type)
+        self.is_shown = type

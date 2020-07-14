@@ -22,6 +22,7 @@ class NodeBase:
     # Extensive information can be found under
     # http://wiki.blender.org/index.php/Doc:2.6/Manual/Extensions/Python/Properties
     object: bpy.props.PointerProperty(type=bpy.types.Object)
+    solve_type: bpy.props.StringProperty(default="test")
 
     # === Optional Functions ===
     # Initialization function, called when a new node is created.
@@ -59,6 +60,7 @@ class NodeBase:
         # # my_string_prop button will only be visible in the sidebar
         # layout.prop(self, "my_string_prop")
         layout.label(text=str(self.object))
+        layout.label(text=self.solve_type)
         pass
 
     def get_value(self, socket, type="default"):
@@ -73,17 +75,22 @@ class NodeBase:
                 
         return val
 
-    def set_object(self, socket, object, type):
+    def set_object(self, socket, object, type, solve_type):
         if type == "in":
             from_node = socket.links[0].from_node
             from_node.object = object
+            from_node.solve_type = solve_type
+            
             for input in self.inputs:
                 print(input)
                 if input.is_linked:
-                    from_node.set_object(input, self.object, "in")
+                    from_node.set_object(input, self.object, "in", self.solve_type)
+        
         if type == "out":
             to_node = socket.links[0].to_node
             to_node.object = object
+            to_node.solve_type = solve_type
+            
             for output in self.outputs:
                 if output.is_linked:
-                    to_node.set_object(output, self.object, "out")
+                    to_node.set_object(output, self.object, "out", self.solve_type)

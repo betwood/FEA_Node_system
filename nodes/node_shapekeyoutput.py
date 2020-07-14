@@ -64,6 +64,8 @@ class NodeShapekeyOutput(Node, NodeBase):
 
         #apply to mesh
         for i in range(len(self.object.data.vertices)):
-            sk.data[i].co = sk_basis.data[i].co + mathutils.Vector((U[3*i], U[3*i+1], U[3*i+2]))
-
+            if self.solve_type == "1DFRAME":
+                sk.data[i].co = sk_basis.data[i].co + mathutils.Vector((U[6*i], U[6*i+1], U[6*i+2]))
+            else:
+                sk.data[i].co = sk_basis.data[i].co + mathutils.Vector((U[3*i], U[3*i+1], U[3*i+2]))
         return
