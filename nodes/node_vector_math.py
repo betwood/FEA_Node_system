@@ -41,9 +41,9 @@ class NodeVectorMath(Node, NodeBase):
     
     
     def init(self, context):
-        self.outputs.new('SocketTypeFloat', "vector_value")
-        self.inputs.new('SocketTypeFloat', "Vector_1").init("vector_1")
-        self.inputs.new('SocketTypeFloat', "Vector_2").init("vector_2")
+        self.outputs.new('SocketTypeVector', "vector_value")
+        self.inputs.new('SocketTypeVector', "Vector_1").init("vector_1")
+        self.inputs.new('SocketTypeVector', "Vector_2").init("vector_2")
 
 
     def draw_buttons(self, context, layout):
@@ -68,8 +68,8 @@ class NodeVectorMath(Node, NodeBase):
         input_socket_2.set_value(self.vector_2)
 
         # get inputs from previous nodes
-        val1 = self.get_value(input_socket_1)
-        val2 = self.get_value(input_socket_2)
+        val1 = np.array(self.get_value(input_socket_1))
+        val2 = np.array(self.get_value(input_socket_2))
 
         if self.my_enum_prop == "ADD":
             self.float_value = val1 + val2

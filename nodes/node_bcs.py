@@ -68,27 +68,20 @@ class BCInput(Node, NodeBase):
         vg_idx = 0
         max = len(self.object.data.vertices) * self.max_mult
         vs = np.zeros((max,1))
+        vs = ((vs == 1))
         i = 0
         gi = self.object.vertex_groups[self.vertex_group].index
         for v in self.object.data.vertices:
             for g in v.groups:
                 if g.group == gi:
                     # any vertex that is a fixed boundary condition is set to 1
-                    if self.x == True:
-                        vs[i] = 1
-                    if self.y == True:
-                        vs[i + 1] = 1
-                    if self.z == True:
-                        vs[i + 2] = 1
+                    vs[i] = self.x
+                    vs[i + 1] = self.y
+                    vs[i + 2] = self.z
                     if self.solve_type == "1DFRAME":
-                        if self.mom_x == True:
-                            vs[i + 3] = 1
-                        if self.mom_y == True:
-                            vs[i + 4] = 1
-                        if self.mom_z == True:
-                            vs[i + 5] = 1
+                        vs[i + 3] = self.mom_x
+                        vs[i + 4] = self.mom_y
+                        vs[i + 5] = self.mom_z
 
             i += self.max_mult # i moves up by 3 because 3 dof per vertex
-        bool = ((vs == 0))
-        print(bool.shape)
-        return bool
+        return vs
