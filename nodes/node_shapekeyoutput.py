@@ -51,7 +51,7 @@ class NodeShapekeyOutput(Node, NodeBase):
 
         # get inputs from previous nodes
         U = self.get_value(input_socket_1)
-        print(U)
+        # print(U)
 
         # get basis shape key
         self.object.active_shape_key_index = 0

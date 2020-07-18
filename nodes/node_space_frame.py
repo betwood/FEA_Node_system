@@ -1,15 +1,21 @@
 import bpy
 import numpy as np
+import scipy
 import bmesh
 import math
 import mathutils
 
+from timeit import default_timer as timer
+from scipy import sparse
+from scipy import linalg
+from scipy.stats import uniform
 from bpy.types import NodeTree, Node, NodeSocket, Object, Operator
 from .node_base import NodeBase
 # from ..sockets.socket_object import SocketObject
 # from ..sockets.socket_matrix import SocketMatrix
 
 DEBUG = False
+TIME = True
 
 class NodeSpaceFrame(Node, NodeBase):
 
@@ -174,6 +180,8 @@ class NodeSpaceFrame(Node, NodeBase):
         return K
 
     def eval(self):
+        if TIME: start = timer()
+        
         # set input sockets
         input_socket_1 = self.inputs[0]
         input_socket_2 = self.inputs[1]
@@ -201,11 +209,9 @@ class NodeSpaceFrame(Node, NodeBase):
         J = self.get_value(input_socket_6)
         self.object = self.get_value(input_socket_7)
         object = self.object
-        ob = object.data
-        print(ob)
+        ob = object.data        
 
-        
-
+        # create bmesh environment
         bm = bmesh.new()
         bm.from_mesh(self.object.data)
 
@@ -215,14 +221,14 @@ class NodeSpaceFrame(Node, NodeBase):
             # column 1 = node 1
             # column 2 = node 2
         # new row 2
-            # column 0 = length
-            # column 1 = modulus of elasticity
-            # column 2 = area
-            # column 3 = x angle
-            # column 4 = y angle
-            # column 5 = z angle
+            # column 0 = modulus of elasticity
+            # column 1 = area
+            # column 2 = G
+            # column 3 = y moment of inertia
+            # column 4 = z moment of inertia
+            # column 5 = J
         edge_matrix = [0,0,0]
-        properties = [0,0,0,0,0,0,0]
+        properties = [0,0,0,0,0,0]
         new_row_1 = edge_matrix
         new_row_2 = properties
         i = 0
@@ -236,7 +242,6 @@ class NodeSpaceFrame(Node, NodeBase):
             new_row_2[3] = Iy
             new_row_2[4] = Iz
             new_row_2[5] = J
-            new_row_2[6] = edge.verts[0].co.x
             if DEBUG: print(new_row_1,new_row_2)
             edge_matrix = np.vstack([edge_matrix, new_row_1])
             properties = np.vstack([properties, new_row_2])
@@ -257,8 +262,7 @@ class NodeSpaceFrame(Node, NodeBase):
 
         # create global stiffness matrix
         K=np.zeros((max,max))
-        for i in range(len(edge_matrix)):
-            
+        for i in range(len(edge_matrix)):        
             K=self.SpaceTrussAssemble(K,k[i, :, :],edge_matrix[i,1],edge_matrix[i,2])
         # print("shape:", K.shape)
         # print("K", K)
@@ -286,7 +290,11 @@ class NodeSpaceFrame(Node, NodeBase):
         # print(F)
 
         # solve for displacement
-        u=np.linalg.solve(Ksolve,F)
+        Ksolve_csr = sparse.csr_matrix(Ksolve)
+        F_csr = sparse.csr_matrix(F)
+        print('solving')
+        u = scipy.sparse.linalg.spsolve(Ksolve_csr, F_csr)
+        print('solving done')
         if DEBUG: print(u)
         bound=np.array([0])
         U=np.zeros((max,1))
@@ -297,6 +305,8 @@ class NodeSpaceFrame(Node, NodeBase):
                 j = j + 1
 
         if DEBUG: print(U)
+        if TIME: end = timer()
+        print("time:", end - start)
         return U
                 
         # # caclulate force

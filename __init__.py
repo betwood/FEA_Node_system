@@ -42,9 +42,9 @@ node_categories = [
         # our basic node
         NodeItem("InputNode"),
         NodeItem("OutputNode"),
-        NodeItem("OperationNode"),
-        NodeItem("VectorInputnode"),
-        NodeItem("VectorOperationNode"),
+        NodeItem("MathNode"),
+        NodeItem("VectorInputNode"),
+        NodeItem("VectorMathNode"),
     ]),
     # static nodes
     MyNodeCategory('STATICSTRUCTURAL', "static structural", items=[
