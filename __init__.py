@@ -45,15 +45,16 @@ node_categories = [
         NodeItem("MathNode"),
         NodeItem("VectorInputNode"),
         NodeItem("VectorMathNode"),
+        NodeItem("InputObjectNode"),
     ]),
     # static nodes
     MyNodeCategory('STATICSTRUCTURAL', "static structural", items=[
-        NodeItem("InputObjectNode"),
         NodeItem("BCNode"),
         NodeItem("ForceNode"),
         NodeItem("CombineBCSNode"),
         NodeItem("CombineForcesNode"),
         NodeItem("OutputShapekeyNode"),
+        NodeItem("OutputVertexColorNode"),
     ]),
     # solvers
     MyNodeCategory('SOLVERS', "solvers", items=[

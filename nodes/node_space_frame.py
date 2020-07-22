@@ -87,7 +87,7 @@ class NodeSpaceFrame(Node, NodeBase):
         y2 = vertex2.y
         z2 = vertex2.z
         L = math.sqrt((x2 - x1)**2 + (y2 - y1)**2 + (z2 - z1)**2)
-        w1 = E * A / L # not coming up with same answer as book
+        w1 = E * A / L
         w2 = 12 * E * Iz / (L ** 3)
         w3 = 6 * E * Iz / (L ** 2)
         w4 = 4 * E * Iz / (L)
@@ -177,6 +177,7 @@ class NodeSpaceFrame(Node, NodeBase):
 
                 K[index1][index2] += k[val1][val2]
         if DEBUG: print(K)
+        
         return K
 
     def eval(self):
@@ -261,13 +262,17 @@ class NodeSpaceFrame(Node, NodeBase):
         if DEBUG: print(k.shape)
 
         # create global stiffness matrix
+        if TIME: assem_start = timer()
         K=np.zeros((max,max))
         for i in range(len(edge_matrix)):        
             K=self.SpaceTrussAssemble(K,k[i, :, :],edge_matrix[i,1],edge_matrix[i,2])
+        if TIME: assem_end = timer()
+        print("space truss assemble", assem_end - assem_start)
         # print("shape:", K.shape)
         # print("K", K)
 
         bool = ((self.get_value(input_socket_8)))
+        bool = np.invert(bool)
         
         F = self.get_value(input_socket_9)
         # print("Force:", F)

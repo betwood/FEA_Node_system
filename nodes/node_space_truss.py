@@ -211,6 +211,7 @@ class NodeSpaceTruss(Node, NodeBase):
         if DEBUG: print(K)
 
         bool = ((self.get_value(input_socket_4)))
+        bool = np.invert(bool)
         
         F = self.get_value(input_socket_5)
         print("Force:", F)
