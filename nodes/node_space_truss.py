@@ -60,6 +60,7 @@ class NodeSpaceTruss(Node, NodeBase):
 
     def update_value(self, context):
         print("updated")
+        return None
 
     def update_object(self):
         input_object = self.inputs["Object"]

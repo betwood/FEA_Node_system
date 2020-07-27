@@ -48,9 +48,13 @@ node_categories = [
         NodeItem("InputObjectNode"),
     ]),
     # static nodes
-    MyNodeCategory('STATICSTRUCTURAL', "static structural", items=[
+    MyNodeCategory('INPUTS', "inputs", items=[
         NodeItem("BCNode"),
         NodeItem("ForceNode"),
+        NodeItem("InputMaterialNode"),
+    ]),
+    # outputs
+    MyNodeCategory('OUTPUTS', "outputs", items=[
         NodeItem("CombineBCSNode"),
         NodeItem("CombineForcesNode"),
         NodeItem("OutputShapekeyNode"),

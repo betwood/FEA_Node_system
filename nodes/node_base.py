@@ -94,3 +94,10 @@ class NodeBase:
             for output in self.outputs:
                 if output.is_linked:
                     to_node.set_object(output, self.object, "out", self.solve_type)
+
+    def update_value(self, context):
+        self.set_inputs()
+        return None
+
+    def set_inputs(self):
+        print("1")

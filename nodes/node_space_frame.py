@@ -4,12 +4,14 @@ import scipy
 import bmesh
 import math
 import mathutils
+import json
 
 from timeit import default_timer as timer
 from scipy import sparse
 from scipy import linalg
 from scipy.stats import uniform
 from bpy.types import NodeTree, Node, NodeSocket, Object, Operator
+from .node_base_solver import NodeSolverBase
 from .node_base import NodeBase
 # from ..sockets.socket_object import SocketObject
 # from ..sockets.socket_matrix import SocketMatrix
@@ -17,7 +19,7 @@ from .node_base import NodeBase
 DEBUG = False
 TIME = True
 
-class NodeSpaceFrame(Node, NodeBase):
+class NodeSpaceFrame(Node, NodeSolverBase):
 
     # Optional identifier string. If not explicitly defined, the python class name is used.
     bl_idname = 'SpaceFrameNode'
@@ -31,8 +33,11 @@ class NodeSpaceFrame(Node, NodeBase):
     Iz: bpy.props.FloatProperty(default=1000)
     J: bpy.props.FloatProperty(default=1000)
     object: bpy.props.PointerProperty(type=Object)
+    solver_type: bpy.props.StringProperty(default="1DFRAME")
+    disp: bpy.props.StringProperty(default="")
+
     
-    
+
     def init(self, context):
         self.outputs.new('SocketTypeMatrix', "Output")
         self.inputs.new('SocketTypeFloat', "E").init("E")
@@ -41,43 +46,35 @@ class NodeSpaceFrame(Node, NodeBase):
         self.inputs.new('SocketTypeFloat', "Iy").init("Iy")
         self.inputs.new('SocketTypeFloat', "Iz").init("Iz")
         self.inputs.new('SocketTypeFloat', "J").init("J")
+        self.inputs.new('SocketTypeMatrix', "Material")
         self.inputs.new('SocketTypeObject', "Object").init("object")
         self.inputs.new('SocketTypeMatrix', "Boundary conditions")
         self.inputs.new('SocketTypeMatrix', "Forces")
+        self.set_inputs()
 
 
     def draw_buttons(self, context, layout):
-        # layout.prop(self, "my_enum_prop", text="")
-        # self.eval()
-        # col = layout.column()
-        # col.prop_search(self, "object", context.scene, "objects")
         pass
 
-    def draw_buttons_ext(self, context, layout):
-        super().draw_buttons_ext(context, layout)
-        layout.operator("node.object_update", text="update objects")
-
+    def set_inputs(self):
+        if self.material_input == "VALUE":
+            self.inputs[0].hide = False
+            self.inputs[2].hide = False
+            self.inputs[3].hide = False
+            self.inputs[4].hide = False
+            self.inputs[5].hide = False
+            self.inputs[6].hide = True
+        else:
+            self.inputs[0].hide = True
+            self.inputs[2].hide = True
+            self.inputs[3].hide = True
+            self.inputs[4].hide = True
+            self.inputs[5].hide = True
+            self.inputs[6].hide = False
+    
     def update_value(self, context):
         print("updated")
-
-    def update_object(self):
-        input_object = self.inputs["Object"]
-        self.object = self.get_value(input_object)
-        self.solve_type = "1DFRAME"
-        print(self.object)
-        for input in self.inputs:
-            if input.is_linked:
-                self.set_object(input, self.object, "in", self.solve_type)
-                if DEBUG: print(input)
-
-        for output in self.outputs:
-            if output.is_linked:
-                self.set_object(output, self.object, "out", self.solve_type)
-                if DEBUG: print(output)
-        # self.get_object()
-
-        
-
+        return None
 
     def SpaceTrussElementStiffness(self, E, A, G, Iy, Iz, J, vertex1, vertex2):
         x1 = vertex1.x
@@ -158,7 +155,6 @@ class NodeSpaceFrame(Node, NodeBase):
         if DEBUG: print(out)
         return out
 
-
     def SpaceTrussAssemble(self, K,k,i,j):
         # puts together stiffness matrix
             #need to look up if there  is a better way of doing this
@@ -183,6 +179,12 @@ class NodeSpaceFrame(Node, NodeBase):
     def eval(self):
         if TIME: start = timer()
         
+        # get held values if they exist
+        if self.buffer == True and not self.disp == "":
+            load = json.loads(self.disp)
+            U = np.array(load)
+            return U
+
         # set input sockets
         input_socket_1 = self.inputs[0]
         input_socket_2 = self.inputs[1]
@@ -193,6 +195,7 @@ class NodeSpaceFrame(Node, NodeBase):
         input_socket_7 = self.inputs[6]
         input_socket_8 = self.inputs[7]
         input_socket_9 = self.inputs[8]
+        input_socket_10 = self.inputs[9]
 
         input_socket_1.set_value(self.E)
         input_socket_2.set_value(self.A)
@@ -202,13 +205,26 @@ class NodeSpaceFrame(Node, NodeBase):
         input_socket_6.set_value(self.J)
 
         # get inputs from previous nodes
-        E = self.get_value(input_socket_1)
-        A = self.get_value(input_socket_2)
-        G = self.get_value(input_socket_3)
-        Iy = self.get_value(input_socket_4)
-        Iz = self.get_value(input_socket_5)
-        J = self.get_value(input_socket_6)
-        self.object = self.get_value(input_socket_7)
+        print("!!!")
+        print(self.material_input)
+        if self.material_input == "VALUE":
+            E = self.get_value(input_socket_1)
+            G = self.get_value(input_socket_3)
+            Iy = self.get_value(input_socket_4)
+            Iz = self.get_value(input_socket_5)
+            J = self.get_value(input_socket_6)
+        elif self.material_input == "NODE":
+            print("NODE")
+            mat_vect = self.get_value(input_socket_7)
+            print(mat_vect)
+            E = mat_vect[0]
+            G = mat_vect[1]
+            Iy = mat_vect[2]
+            Iz = mat_vect[3]
+            J = mat_vect[4]
+
+        A = self.get_value(input_socket_2)        
+        self.object = self.get_value(input_socket_8)
         object = self.object
         ob = object.data        
 
@@ -271,10 +287,10 @@ class NodeSpaceFrame(Node, NodeBase):
         # print("shape:", K.shape)
         # print("K", K)
 
-        bool = ((self.get_value(input_socket_8)))
+        bool = ((self.get_value(input_socket_9)))
         bool = np.invert(bool)
         
-        F = self.get_value(input_socket_9)
+        F = self.get_value(input_socket_10)
         # print("Force:", F)
         bool = np.ravel(bool)
         # print("bool after", bool)
@@ -312,6 +328,11 @@ class NodeSpaceFrame(Node, NodeBase):
         if DEBUG: print(U)
         if TIME: end = timer()
         print("time:", end - start)
+        
+        
+        array = U.tolist()
+        self.disp = json.dumps(array)
+
         return U
                 
         # # caclulate force
@@ -345,18 +366,3 @@ class NodeSpaceFrame(Node, NodeBase):
 
         
         # return object
-
-class UpdateObjectNodeOperator(Operator):
-    """Add a simple box mesh"""
-    bl_idname = "node.object_update"
-    bl_label = "update object node tree"
-
-    # node_group_name = StringProperty()
-
-    node = None
-
-    def execute(self, context):
-        # node = [i for i in bpy.data.node_groups[bpy.context.space_data.node_tree.name].nodes if i.bl_idname == "Outputnode"][0]
-        node = context.active_node
-        node.update_object()
-        return{'FINISHED'}
