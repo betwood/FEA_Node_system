@@ -57,7 +57,7 @@ class NodeMaterialInput(Node, NodeBase):
 
     def eval(self):
         if self.my_enum_prop == "ALUMINUM":
-            mat = [21000000, .1, 10000, 1000, 1000, 1000]
+            mat = [68900000, 26000000]
         if self.my_enum_prop == "STEEL":
-            mat = [12000000, .1, 10000, 1000, 1000, 1000]
+            mat = [200000000, 80000000]
         return mat

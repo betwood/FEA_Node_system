@@ -41,6 +41,20 @@ class NodeSolverBase(NodeBase):
         update=NodeBase.update_value,
     )
 
+        # setup for drop down list
+    drop_down_items_2 = (
+        ('VALUE', "Value", "Add the 2 values together"),
+        ('NODE', "Node", "Subtract the second value from the first"),
+    )
+
+    size_input: bpy.props.EnumProperty(
+        name = "area input type",
+        description = "The type of operation that will be used",
+        items = drop_down_items_2,
+        default = 'VALUE',
+        update=NodeBase.update_value,
+    )
+
     # setup for drop down list
     buffer: bpy.props.BoolProperty(default=True)
 
@@ -58,6 +72,7 @@ class NodeSolverBase(NodeBase):
         super().draw_buttons_ext(context, layout)
         layout.operator("node.object_update", text="update objects")
         layout.prop(self, "material_input", text="")
+        layout.prop(self, "size_input", text="")
         layout.prop(self, "buffer", text="Buffer")
 
     def update_value(self, context):

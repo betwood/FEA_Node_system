@@ -42,6 +42,7 @@ class NodeSpaceFrame(Node, NodeSolverBase):
         self.outputs.new('SocketTypeMatrix', "Output")
         self.inputs.new('SocketTypeFloat', "E").init("E")
         self.inputs.new('SocketTypeFloat', "A").init("A")
+        self.inputs.new('SocketTypeMatrix', "A_mat")
         self.inputs.new('SocketTypeFloat', "G").init("G")
         self.inputs.new('SocketTypeFloat', "Iy").init("Iy")
         self.inputs.new('SocketTypeFloat', "Iz").init("Iz")
@@ -59,18 +60,24 @@ class NodeSpaceFrame(Node, NodeSolverBase):
     def set_inputs(self):
         if self.material_input == "VALUE":
             self.inputs[0].hide = False
-            self.inputs[2].hide = False
             self.inputs[3].hide = False
-            self.inputs[4].hide = False
-            self.inputs[5].hide = False
-            self.inputs[6].hide = True
+            self.inputs[7].hide = True
         else:
             self.inputs[0].hide = True
-            self.inputs[2].hide = True
             self.inputs[3].hide = True
+            self.inputs[7].hide = False
+        if self.size_input == "VALUE":
+            self.inputs[1].hide = False
+            self.inputs[4].hide = False
+            self.inputs[5].hide = False
+            self.inputs[6].hide = False
+            self.inputs[2].hide = True
+        else:
+            self.inputs[1].hide = True
             self.inputs[4].hide = True
             self.inputs[5].hide = True
-            self.inputs[6].hide = False
+            self.inputs[6].hide = True
+            self.inputs[2].hide = False
     
     def update_value(self, context):
         print("updated")
@@ -196,35 +203,44 @@ class NodeSpaceFrame(Node, NodeSolverBase):
         input_socket_8 = self.inputs[7]
         input_socket_9 = self.inputs[8]
         input_socket_10 = self.inputs[9]
+        input_socket_11 = self.inputs[10]
 
         input_socket_1.set_value(self.E)
-        input_socket_2.set_value(self.A)
-        input_socket_3.set_value(self.G)
-        input_socket_4.set_value(self.Iy)
-        input_socket_5.set_value(self.Iz)
-        input_socket_6.set_value(self.J)
+        input_socket_4.set_value(self.G)
+        input_socket_5.set_value(self.Iy)
+        input_socket_6.set_value(self.Iz)
+        input_socket_7.set_value(self.J)
 
         # get inputs from previous nodes
         print("!!!")
         print(self.material_input)
         if self.material_input == "VALUE":
             E = self.get_value(input_socket_1)
-            G = self.get_value(input_socket_3)
-            Iy = self.get_value(input_socket_4)
-            Iz = self.get_value(input_socket_5)
-            J = self.get_value(input_socket_6)
+            G = self.get_value(input_socket_4)
+            
         elif self.material_input == "NODE":
             print("NODE")
-            mat_vect = self.get_value(input_socket_7)
+            mat_vect = self.get_value(input_socket_8)
             print(mat_vect)
             E = mat_vect[0]
             G = mat_vect[1]
-            Iy = mat_vect[2]
-            Iz = mat_vect[3]
-            J = mat_vect[4]
 
-        A = self.get_value(input_socket_2)        
-        self.object = self.get_value(input_socket_8)
+        if self.size_input == "VALUE":
+            input_socket_2.set_value(self.A)
+            A = self.get_value(input_socket_2)
+            Iy = self.get_value(input_socket_5)
+            Iz = self.get_value(input_socket_6)
+            J = self.get_value(input_socket_7)
+        else:
+            A_mat = self.get_value(input_socket_3)
+            A = A_mat[0]
+            Iz = A_mat[1]
+            Iy = A_mat[2]
+            J = A_mat[3]
+
+
+                
+        self.object = self.get_value(input_socket_9)
         object = self.object
         ob = object.data        
 
@@ -287,10 +303,10 @@ class NodeSpaceFrame(Node, NodeSolverBase):
         # print("shape:", K.shape)
         # print("K", K)
 
-        bool = ((self.get_value(input_socket_9)))
+        bool = ((self.get_value(input_socket_10)))
         bool = np.invert(bool)
         
-        F = self.get_value(input_socket_10)
+        F = self.get_value(input_socket_11)
         # print("Force:", F)
         bool = np.ravel(bool)
         # print("bool after", bool)
