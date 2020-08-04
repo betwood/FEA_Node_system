@@ -19,12 +19,12 @@ from .node_base import NodeBase
 DEBUG = False
 TIME = True
 
-class NodeSpaceFrame(Node, NodeSolverBase):
+class NodeShellTri(Node, NodeSolverBase):
 
     # Optional identifier string. If not explicitly defined, the python class name is used.
-    bl_idname = 'SpaceFrameNode'
+    bl_idname = 'TriShellNode'
     # Label for nice name display
-    bl_label = "Space Frame node"
+    bl_label = "Shell Tri node"
 
     E: bpy.props.FloatProperty(default=21000000)
     A: bpy.props.FloatProperty(default=.1)
@@ -83,84 +83,35 @@ class NodeSpaceFrame(Node, NodeSolverBase):
         print("updated")
         return None
 
-    def SpaceTrussElementStiffness(self, E, A, G, Iy, Iz, J, vertex1, vertex2):
-        x1 = vertex1.x
-        y1 = vertex1.y
-        z1 = vertex1.z
-        x2 = vertex2.x
-        y2 = vertex2.y
-        z2 = vertex2.z
-        L = math.sqrt((x2 - x1)**2 + (y2 - y1)**2 + (z2 - z1)**2)
-        w1 = E * A / L
-        w2 = 12 * E * Iz / (L ** 3)
-        w3 = 6 * E * Iz / (L ** 2)
-        w4 = 4 * E * Iz / (L)
-        w5 = 2 * E * Iz / L
-        w6 = 12 * E * Iy / (L ** 3)
-        w7 = 6 * E * Iy / (L ** 2)
-        w8 = 4 * E * Iy / (L)
-        w9 = 2 * E * Iy
-        w10 = G * J / L
-        kprime = np.array([
-            [w1, 0, 0, 0, 0, 0, -w1, 0, 0, 0, 0, 0],
-            [0, w2, 0, 0, 0, w3, 0, -w2, 0, 0, 0, w3],
-            [0, 0, w6, 0, -w7, 0, 0, 0, -w6, 0, -w7, 0],
-            [0, 0, 0, w10, 0, 0, 0, 0, 0, -w10, 0, 0],
-            [0, 0, -w7, 0, w8, 0, 0, 0, w7, 0, w9, 0],
-            [0, w3, 0, 0, 0, w4, 0, -w3, 0, 0, 0, w5],
-            [-w1, 0, 0, 0, 0, 0, w1, 0, 0, 0, 0, 0],
-            [0, -w2, 0, 0, 0, -w3, 0, w2, 0, 0, 0, -w3],
-            [0, 0, -w6, 0, w7, 0, 0, 0, w6, 0, w7, 0],
-            [0, 0, 0, -w10, 0, 0, 0, 0, 0, w10, 0, 0],
-            [0, 0, -w7, 0, w9, 0, 0, 0, w7, 0, w8, 0],
-            [0, w3, 0, 0, 0, w5, 0, -w3, 0, 0, 0, w4]
-        ])
-        if DEBUG: print("kprime", kprime)
-        if x1 == x2 and y1 == y2:
-            if z2 > z1:
-                lam = np.array([
-                    [0, 0, 1],
-                    [0, 1, 0],
-                    [-1, 0, 0]
-                ])
-            else:
-                lam = np.array([
-                    [0, 0, -1],
-                    [0, 1, 0],
-                    [1, 0, 0]
-                ])
-        else:
-            CXx = (x2 - x1)/L
-            CYx = (y2 - y1)/L
-            CZx = (z2 - z1)/L
-            D = math.sqrt(CXx**2 + CYx**2)
-            CXy = -CYx / D
-            CYy = CXx / D
-            CZy = 0
-            CXz = -CXx * CZx / D
-            CYz = -CYx * CZx / D
-            CZz = D
-            lam = np.array([
-                [CXx, CYx, CZx],
-                [CXy, CYy, CZy],
-                [CXz, CYz, CZz]
-            ])
+    def CSTElement(self, properties):
+        t = properties[3]
+        Eprop = properties[0]
+        v = properties[2]
+        A = (x1(y2 - y3) + x2(y3 - y1) + x3(y1 - y2)) / 2
+        E = (Eprop / (1 - n ** 2)) * np.array([1, v, 0], [v, 1, 0], [0, 0, (1 - v) / 2])
+        #not right need local space values here also based on element not edge
+        x1 = bm.edges[e].verts[0].co[0]
+        x2 = bm.edges[e].verts[1].co[0]
+        x3 = bm.edges[e].verts[2].co[0]
+        y1 = bm.edges[e].verts[0].co[1]
+        y2 = bm.edges[e].verts[1].co[1]
+        y3 = bm.edges[e].verts[2].co[1]
+        B = np.array(
+            [y2 - y3, 0, y3 - y1, 0, y1 - y2, 0],
+            [0, x3 - x2, 0, x1 - x3, 0, x2 - x1],
+            [x3 - x2, y2 - y3, x1 - x3, y3 - y1, x2 - x1, y1 - y2]
+        )
+        k = t * A * transpose(B) * E * B
+        return k
 
-        zero3 = np.zeros((3, 3))
-
-        row1 = np.concatenate((lam, zero3, zero3, zero3))
-        row2 = np.concatenate((zero3, lam, zero3, zero3))
-        row3 = np.concatenate((zero3, zero3, lam, zero3))
-        row4 = np.concatenate((zero3, zero3, zero3, lam))
-
-        R = np.concatenate((row1, row2, row3, row4), axis=1)
-
-        Rp = np.transpose(R)
-        if DEBUG: print("R:", R, "shape:", R.shape)
-        out = np.dot(Rp, kprime)
-        out = np.dot(out, R)
-        if DEBUG: print(out)
-        return out
+    def ElementStiffnessMatrix(self, properties):
+        # convert coordinates from global to local
+        Vx = np.array([xj - xk], [yj - yk], [zj - zk])
+        Vr = np.array()
+        transform = np.array(
+            []
+        )
+        
 
     def SpaceTrussAssemble(self, K,k,i,j):
         # puts together stiffness matrix
@@ -262,15 +213,20 @@ class NodeSpaceFrame(Node, NodeSolverBase):
             # column 5 = J
         edge_matrix = np.zeros((12), dtype=int)
         properties = [0,0,0,0,0,0]
+        coormat = np.zeros((18))
         new_row_1 = edge_matrix
         new_row_2 = properties
         i = 0
-        for edge in bm.edges:
-            for i in range(12):
-                if i < 6:
-                    new_row_1[i] = edge.verts[0].index
-                else:
-                    new_row_1[i] = edge.verts[1].index
+        for face in bm.faces:
+            j = 0
+            for loop in face.loops:
+                vert = loop.vert
+                coordinates = np.narray([vert.co[0], vert.co[1], vert.co[2]])
+                coorelement = np.hstack(coorelement, coordinates)
+
+                for i in range(6):
+                    new_row_1[j] = vert.index
+                    j = j + 1
 
             new_row_2[0] = E
             new_row_2[1] = A
@@ -281,9 +237,11 @@ class NodeSpaceFrame(Node, NodeSolverBase):
             if DEBUG: print(new_row_1,new_row_2)
             edge_matrix = np.vstack([edge_matrix, new_row_1])
             properties = np.vstack([properties, new_row_2])
+            coormat = np.vstack([coormat, coorelement])
             i += 1
         edge_matrix = np.delete(edge_matrix, 0, 0) # find better way to initialize (redundant)
         properties = np.delete(properties, 0, 0)
+        coormat = np.delete(coormat, 0, 0)
         if DEBUG: print('edge_matrix',edge_matrix)
         if DEBUG: print('properties',properties)
         print(edge_matrix.shape)
@@ -296,7 +254,7 @@ class NodeSpaceFrame(Node, NodeSolverBase):
         K=np.zeros((max,max))
         for e in range(len(edge_matrix)):
             # print(e)
-            k = self.SpaceTrussElementStiffness(properties[e, 0],properties[e, 1],properties[e, 2],properties[e, 3],properties[e, 4],properties[e, 5], bm.edges[e].verts[0].co, bm.edges[e].verts[1].co)
+            k = self.ElementStiffnessMatrix(properties)
             # print(k)
 
             K= self.SpaceTrussAssemble(K, k, edge_matrix[e,0], edge_matrix[e,6])
