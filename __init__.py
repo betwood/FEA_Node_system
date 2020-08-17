@@ -65,6 +65,7 @@ node_categories = [
         NodeItem("OutputVertexColorNode"),
         NodeItem("OutputGeneric"),
         NodeItem("OutputNode"),
+        NodeItem("OutputValueNode")
     ]),
     # solvers
     MyNodeCategory('SOLVERS', "solvers", items=[

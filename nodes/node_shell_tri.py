@@ -27,11 +27,8 @@ class NodeShellTri(Node, NodeSolverBase):
     bl_label = "Shell Tri node"
 
     E: bpy.props.FloatProperty(default=21000000)
-    A: bpy.props.FloatProperty(default=.1)
-    G: bpy.props.FloatProperty(default=10000)
-    Iy: bpy.props.FloatProperty(default=1000)
-    Iz: bpy.props.FloatProperty(default=1000)
-    J: bpy.props.FloatProperty(default=1000)
+    v: bpy.props.FloatProperty(default=.3)
+    t: bpy.props.FloatProperty(default=.1)
     object: bpy.props.PointerProperty(type=Object)
     solver_type: bpy.props.StringProperty(default="1DFRAME")
     disp: bpy.props.StringProperty(default="")
@@ -41,13 +38,10 @@ class NodeShellTri(Node, NodeSolverBase):
     def init(self, context):
         self.outputs.new('SocketTypeMatrix', "Output")
         self.inputs.new('SocketTypeFloat', "E").init("E")
-        self.inputs.new('SocketTypeFloat', "A").init("A")
-        self.inputs.new('SocketTypeMatrix', "A_mat")
-        self.inputs.new('SocketTypeFloat', "G").init("G")
-        self.inputs.new('SocketTypeFloat', "Iy").init("Iy")
-        self.inputs.new('SocketTypeFloat', "Iz").init("Iz")
-        self.inputs.new('SocketTypeFloat', "J").init("J")
+        self.inputs.new('SocketTypeFloat', "v").init("v")
         self.inputs.new('SocketTypeMatrix', "Material")
+        self.inputs.new('SocketTypeFloat', "t").init("t")
+        self.inputs.new('SocketTypeMatrix', "t_mat")
         self.inputs.new('SocketTypeObject', "Object").init("object")
         self.inputs.new('SocketTypeMatrix', "Boundary conditions")
         self.inputs.new('SocketTypeMatrix', "Forces")
@@ -60,74 +54,272 @@ class NodeShellTri(Node, NodeSolverBase):
     def set_inputs(self):
         if self.material_input == "VALUE":
             self.inputs[0].hide = False
-            self.inputs[3].hide = False
-            self.inputs[7].hide = True
-        else:
-            self.inputs[0].hide = True
-            self.inputs[3].hide = True
-            self.inputs[7].hide = False
-        if self.size_input == "VALUE":
             self.inputs[1].hide = False
-            self.inputs[4].hide = False
-            self.inputs[5].hide = False
-            self.inputs[6].hide = False
             self.inputs[2].hide = True
         else:
+            self.inputs[0].hide = True
             self.inputs[1].hide = True
-            self.inputs[4].hide = True
-            self.inputs[5].hide = True
-            self.inputs[6].hide = True
             self.inputs[2].hide = False
+        if self.size_input == "VALUE":
+            self.inputs[3].hide = False
+            self.inputs[4].hide = True
+        else:
+            self.inputs[3].hide = True
+            self.inputs[4].hide = False
     
     def update_value(self, context):
         print("updated")
         return None
 
-    def CSTElement(self, properties):
-        t = properties[3]
-        Eprop = properties[0]
-        v = properties[2]
-        A = (x1(y2 - y3) + x2(y3 - y1) + x3(y1 - y2)) / 2
-        E = (Eprop / (1 - n ** 2)) * np.array([1, v, 0], [v, 1, 0], [0, 0, (1 - v) / 2])
+    def CSTElement(self, properties, coorloc, e):
+        # print(properties)
+        # print(properties.shape)
+        t = properties[0, 3]
+        Eprop = properties[0, 0]
+        v = properties[0, 2]
+        # print(v ** 2)
+        E = (Eprop / (1 - v ** 2)) * np.array([[1, v, 0], [v, 1, 0], [0, 0, (1 - v) / 2]])
+        # print("E", E)
         #not right need local space values here also based on element not edge
-        x1 = bm.edges[e].verts[0].co[0]
-        x2 = bm.edges[e].verts[1].co[0]
-        x3 = bm.edges[e].verts[2].co[0]
-        y1 = bm.edges[e].verts[0].co[1]
-        y2 = bm.edges[e].verts[1].co[1]
-        y3 = bm.edges[e].verts[2].co[1]
-        B = np.array(
-            [y2 - y3, 0, y3 - y1, 0, y1 - y2, 0],
-            [0, x3 - x2, 0, x1 - x3, 0, x2 - x1],
-            [x3 - x2, y2 - y3, x1 - x3, y3 - y1, x2 - x1, y1 - y2]
-        )
-        k = t * A * transpose(B) * E * B
-        return k
+        # print(coorloc)
+        # bm = bmesh.new()
+        # bm.from_mesh(self.object.data)
+        # bm.edges.ensure_lookup_table()
+        x1 = coorloc[0, 0]
+        x2 = coorloc[1, 0]
+        x3 = coorloc[2, 0]
+        y1 = coorloc[0, 1]
+        y2 = coorloc[1, 1]
+        y3 = coorloc[2, 1]
 
-    def ElementStiffnessMatrix(self, properties):
-        # convert coordinates from global to local
-        Vx = np.array([xj - xk], [yj - yk], [zj - zk])
-        Vr = np.array()
-        transform = np.array(
-            []
+        A = (x1 * (y2 - y3) + x2 * (y3 - y1) + x3 * (y1 - y2)) / 2
+
+        B = np.array(
+            [[y2 - y3, 0, y3 - y1, 0, y1 - y2, 0],
+            [0, x3 - x2, 0, x1 - x3, 0, x2 - x1],
+            [x3 - x2, y2 - y3, x1 - x3, y3 - y1, x2 - x1, y1 - y2]]
         )
         
+        k = t * A * np.dot(np.dot(np.transpose(B), E), B)
+        return k
+
+    def DKTElement(self, properties, coorloc):
+        x23 = coorloc[1, 0] - coorloc[2, 0]
+        x31 = coorloc[2, 0] - coorloc[0, 0]
+        x12 = coorloc[0, 0] - coorloc[1, 0]
+        y23 = coorloc[1, 1] - coorloc[2, 1]
+        y31 = coorloc[2, 1] - coorloc[0, 1]
+        y12 = coorloc[0, 1] - coorloc[1, 1]
+        # print("0, 1", coorloc[0, 1])
+        E = properties[0, 0]
+        v = properties[0, 2]
+        t = properties[0, 3]
+        Db = E * t ** 3 / (12 * 1 - v ** 2) * np.array([[1, v, 0], [v, 1, 0], [0, 0, (1 - v) / 2]])
+        A = (1 / 2) * (x31 * y12 - x12 * y31)
+        z = np.array([1/2, 1/2, 0])
+        n = np.array([0, 1/2, 1/2])
+        w = np.array([1/3, 1/3, 1/3])
+        k = np.zeros((9, 9))
+        for j in range(3):
+            for i in range(3):
+                B = self.B(properties, coorloc, z[i], n[j])
+                # print("B", B)
+                B = 1 / (2 * A) * B
+                k = w[j] * w[i] * np.dot(np.dot(np.transpose(B), Db), B)
+                # print("before", k)
+        
+        return 2 * A * k
+
+    def B(self, properties, coorloc, z, n):
+        x23 = coorloc[1, 0] - coorloc[2, 0]
+        x31 = coorloc[2, 0] - coorloc[0, 0]
+        x12 = coorloc[0, 0] - coorloc[1, 0]
+        y23 = coorloc[1, 1] - coorloc[2, 1]
+        y31 = coorloc[2, 1] - coorloc[0, 1]
+        y12 = coorloc[0, 1] - coorloc[1, 1]
+        l23 = (x23 ** 2 + y23 ** 2) ** (1/2)
+        l31 = (x31 ** 2 + y31 ** 2) ** (1/2)
+        l12 = (x12 ** 2 + y12 ** 2) ** (1/2)
+        # print("locations", coorloc)
+        # print("distance", l23, l31, l12)
+        P4 = - 6 * x23 / (l23 ** 2)
+        P5 = - 6 * x31 / (l31 ** 2) 
+        P6 = - 6 * x12 / (l12 ** 2)
+        q4 = 3 * x23 * y23 / (l23 ** 2)
+        q5 = 3 * x31 * y31 / (l31 ** 2) 
+        q6 = 3 * x12 * y12 / (l12 ** 2)
+        r4 = 3 * y23 ** 2 / (l23 ** 2)
+        r5 = 3 * y31 ** 2 / (l31 ** 2) 
+        r6 = 3 * y12 ** 2 / (l12 ** 2)
+        t4 = -6 * y23 / (l23 ** 2)
+        t5 = -6 * y31 / (l31 ** 2) 
+        t6 = -6 * y12 / (l12 ** 2)       
+
+        Hxz = np.array([
+            [P6 * (1 - 2 * z) + (P5 - P6) * n],
+            [q6 * (1 - 2 * z) - (q5 + q6) * n],
+            [-4 + 6 * (z + n) + r6 * (1 - 2 * z) - n * (r5 + r6)],
+            [-P6 * (1 - 2 * z) + n * (P4 + P6)],
+            [q6 * (1 - 2 * z) - n * (q6 - q4)],
+            [-2 + 6 * z + r6 * (1 - 2 * z) + n * (r4 - r6)],
+            [-n * (P5 + P4)],
+            [n * (q4 - q5)],
+            [-n * (r5 - r4)]
+        ])
+        
+
+        Hyz = np.array([
+            [t6 * (1 - 2 * z) + (t5 - t6) * n],
+            [1+ r6 * (1 - 2 * z) - (r5 + r6) * n],
+            [-q6 * (1 - 2 * z) - n * (q5 + q6)],
+            [-t6 * (1 - 2 * z) + n * (t4 + t6)],
+            [-1 + r6 * (1 - 2 * z) - n * (r4 - r6)],
+            [q6 * (1 - 2 * z)+ n * (q4 - q6)],
+            [-n * (t4 + t5)],
+            [n * (r4 - r5)],
+            [-n * (q4 - q5)]
+        ])
+
+        Hxn = np.array([
+            [P5 * (1 - 2 * n) + (P6 - P5) * z],
+            [q5 * (1 - 2 * n) - (q5 + q6) * z],
+            [-4 + 6 * (z + n) + r5 * (1 - 2 * n) - z * (r5 + r6)],
+            [z * (P4 + P6)],
+            [z * (q4 - q6)],
+            [-z * (r6 - r4)],
+            [P5 * ( 1 - 2 * n) - z * (P4 + P5)],
+            [q5 * (1 - 2 * n) + z * (q4 - q5)],
+            [-2 + 6 * n + r5 * (1- 2 * n) + z * (r4 - r5)]
+        ])
+
+        Hyn = np.array([
+            [t5 * (1 - 2 * n) + (t6 - t5) * z],
+            [1+ r5 * (1 - 2 * n) - (r5 + r6) * z],
+            [-q5 * (1 - 2 * n) - z * (q5 + q6)],
+            [z * (t4 + t6)],
+            [z * (r4 - r6)],
+            [-z * (q4 - q6)],
+            [t5 * ( 1 - 2 * n) - z * (t4 + t5)],
+            [1 - r5 * (1 - 2 * n) + z * (r4 - r5)],
+            [-q5 * (1- 2 * n) + z * (q4 - q5)]
+        ])
+        
+        # print("Hxz", Hxz)
+        # print("B row 1", y31 * np.transpose(Hxz) + y12 * np.transpose(Hxn))
+
+        B = np.vstack([
+            y31 * np.transpose(Hxz) + y12 * np.transpose(Hxn),
+            -x31 * np.transpose(Hyz) - x12 * np.transpose(Hyn),
+            -x31 * np.transpose(Hxz) - x12 * np.transpose(Hxn) + y31 * np.transpose(Hyz) + y12 * np.transpose(Hyn)
+        ])
+        # print("shape", B.shape)
+        return B
+
+    def normalize(self, vector):
+        length = (vector[0] ** 2 + vector[1] ** 2 + vector[2] ** 2) ** (1/2)
+        return vector / length
+
+    def ElementStiffnessMatrix(self, properties, coormat, edge_matrix, e):
+        # convert coordinates from global to local
+        # print(coormat)
+        xj = (coormat[3] + coormat[6])/2
+        xk = (coormat[0] + coormat[6])/2
+        xi = (coormat[0] + coormat[3])/2
+        yj = (coormat[4] + coormat[7])/2
+        yk = (coormat[1] + coormat[7])/2
+        yi = (coormat[1] + coormat[4])/2
+        zj = (coormat[5] + coormat[8])/2
+        zk = (coormat[2] + coormat[8])/2
+        zi = (coormat[2] + coormat[5])/2
+        Vx = np.array([xj - xk, yj - yk, zj - zk])
+        Vr = np.array([coormat[6] - xi, coormat[7] - yi, coormat[8] - zi])
+        # print(Vx.shape)
+        # print(Vr.shape)
+        Vz = np.cross(Vx, Vr)
+        Vy = np.cross(Vz, Vx)
+        lx = self.normalize(Vx)
+        ly = self.normalize(Vy)
+        lz = self.normalize(Vz)
+        transform = np.array(
+            [lx, ly, lz]
+        )
+        # print("transform", transform)
+        coorloc = np.zeros((3,3))
+        # print(coorloc)
+        transposet = np.transpose(transform)
+
+        x = np.arange(4).reshape((2,2))
+        xt = np.transpose(x)
+        # print("x", x.transpose)
+        # print("shapes", transposet.shape, coormat[0:3].shape)
+        # print(np.dot(transposet, coormat[0:3]))
+        coorloc[0, :] = np.dot(transposet, coormat[0:3])
+        coorloc[1, :] = np.dot(transposet, coormat[3:6])
+        coorloc[2, :] = np.dot(transposet, coormat[6:9])
+        kcst = self.CSTElement(properties, coorloc, e)
+        kdkt = self.DKTElement(properties, coorloc)
+        # print("!!!!!")
+        # print(kcst)
+        # print(kdkt)
+        k = np.zeros((18, 18))
+        for i in range(3):
+            for j in range(3):
+                k[i * 6, j * 6] += kcst[i * 2, j * 2]
+                k[i * 6 + 1, j * 6] += kcst[i * 2 + 1, j * 2]
+                k[i * 6, j * 6 + 1] += kcst[i * 2, j * 2 + 1]
+                k[i * 6 + 1, j * 6 + 1] += kcst[i * 2 + 1, j * 2 + 1]
+                k[i * 6 + 2, j * 6 + 2] += kdkt[i * 2, j * 2]
+                k[i * 6 + 3, j * 6 + 2] += kdkt[i * 2 + 1, j * 2]
+                k[i * 6 + 4, j * 6 + 2] += kdkt[i * 2 + 2, j * 2]
+                k[i * 6 + 2, j * 6 + 3] += kdkt[i * 2, j * 2 + 1]
+                k[i * 6 + 3, j * 6 + 3] += kdkt[i * 2 + 1, j * 2 + 1]
+                k[i * 6 + 4, j * 6 + 3] += kdkt[i * 2 + 2, j * 2 + 1]
+                k[i * 6 + 2, j * 6 + 4] += kdkt[i * 2, j * 2 + 2]
+                k[i * 6 + 3, j * 6 + 4] += kdkt[i * 2 + 1, j * 2 + 2]
+                k[i * 6 + 4, j * 6 + 4] += kdkt[i * 2 + 2, j * 2 + 2]
+                k[i * 6 + 5, j * 6 + 5] += max(np.diagonal(kcst)) / 1000
+        # k1 = np.concatenate((kcst, np.zeros((6,12)), axis=0)
+        # k2 = np.concatenate((np.zeros((9,6)), kdkt, np.zeros((9,3))), axis=0)
+        # kmax = max(np.diagnal(k1)) / 1000
+        # kdrill = np.array([
+        #     [kmax, 0, 0],
+        #     [0, kmax, 0],
+        #     [0, 0, kmax]
+        # ])
+        # k3 = np.concatenate((np.zeros((3,15)), kdrill), axis=0)
+        # k = np.concatenate((k1, k2, k3), axis=1)
+        z = np.zeros((3,3))
+        T1 = np.concatenate((transform, z, z, z, z, z), axis=0)
+        T2 = np.concatenate((z, transform, z, z, z, z), axis=0)
+        T3 = np.concatenate((z, z, transform, z, z, z), axis=0)
+        T4 = np.concatenate((z, z, z, transform, z, z), axis=0)
+        T5 = np.concatenate((z, z, z, z, transform, z), axis=0)
+        T6 = np.concatenate((z, z, z, z, z, transform), axis=0)
+        T = np.concatenate((T1, T2, T3, T4, T5, T6), axis = 1)
+        K = np.dot(np.dot(np.transpose(T), k), T)
+
+        return K
+
 
     def SpaceTrussAssemble(self, K,k,i,j):
         # puts together stiffness matrix
             #need to look up if there  is a better way of doing this
         
-        for val1 in range(12):
-            for val2 in range(12):
+        for val1 in range(18):
+            for val2 in range(18):
                 if val1 <= 5:
                     index1 = 6 * i + val1
-                else:
+                elif val1 <= 11:
                     index1 = 6 * j + (val1 - 6)
+                else:
+                    index1 = 6 * j + (val1 - 12)
 
                 if val2 <= 5:
                     index2 = 6 * i + val2
-                else:
+                elif val2 <= 11:
                     index2 = 6 * j + (val2 - 6)
+                else:
+                    index2 = 6 * j + (val1 - 12)
 
                 K[index1][index2] += k[val1][val2]
         if DEBUG: print(K)
@@ -152,46 +344,33 @@ class NodeShellTri(Node, NodeSolverBase):
         input_socket_6 = self.inputs[5]
         input_socket_7 = self.inputs[6]
         input_socket_8 = self.inputs[7]
-        input_socket_9 = self.inputs[8]
-        input_socket_10 = self.inputs[9]
-        input_socket_11 = self.inputs[10]
 
         input_socket_1.set_value(self.E)
-        input_socket_4.set_value(self.G)
-        input_socket_5.set_value(self.Iy)
-        input_socket_6.set_value(self.Iz)
-        input_socket_7.set_value(self.J)
+        input_socket_2.set_value(self.v)
 
         # get inputs from previous nodes
-        print("!!!")
-        print(self.material_input)
+        # print("!!!")
+        # print(self.material_input)
         if self.material_input == "VALUE":
             E = self.get_value(input_socket_1)
-            G = self.get_value(input_socket_4)
+            v = self.get_value(input_socket_2)
             
         elif self.material_input == "NODE":
-            print("NODE")
-            mat_vect = self.get_value(input_socket_8)
-            print(mat_vect)
+            # print("NODE")
+            mat_vect = self.get_value(input_socket_3)
+            # print(mat_vect)
             E = mat_vect[0]
-            G = mat_vect[1]
+            v = mat_vect[2]
 
         if self.size_input == "VALUE":
-            input_socket_2.set_value(self.A)
-            A = self.get_value(input_socket_2)
-            Iy = self.get_value(input_socket_5)
-            Iz = self.get_value(input_socket_6)
-            J = self.get_value(input_socket_7)
+            input_socket_4.set_value(self.t)
+            t = self.get_value(input_socket_4)
         else:
-            A_mat = self.get_value(input_socket_3)
-            A = A_mat[0]
-            Iz = A_mat[1]
-            Iy = A_mat[2]
-            J = A_mat[3]
+            t = self.get_value(input_socket_5)
 
 
                 
-        self.object = self.get_value(input_socket_9)
+        self.object = self.get_value(input_socket_6)
         object = self.object
         ob = object.data        
 
@@ -211,32 +390,34 @@ class NodeShellTri(Node, NodeSolverBase):
             # column 3 = y moment of inertia
             # column 4 = z moment of inertia
             # column 5 = J
-        edge_matrix = np.zeros((12), dtype=int)
+        edge_matrix = np.zeros((18), dtype=int)
         properties = [0,0,0,0,0,0]
-        coormat = np.zeros((18))
+        coormat = np.zeros((9))
         new_row_1 = edge_matrix
         new_row_2 = properties
         i = 0
+        G = 0
         for face in bm.faces:
             j = 0
+            coorelement = np.array([])
             for loop in face.loops:
                 vert = loop.vert
-                coordinates = np.narray([vert.co[0], vert.co[1], vert.co[2]])
-                coorelement = np.hstack(coorelement, coordinates)
+                coordinates = np.array([vert.co[0], vert.co[1], vert.co[2]])
+                coorelement = np.hstack([coorelement, coordinates])
 
                 for i in range(6):
                     new_row_1[j] = vert.index
                     j = j + 1
 
             new_row_2[0] = E
-            new_row_2[1] = A
-            new_row_2[2] = G
-            new_row_2[3] = Iy
-            new_row_2[4] = Iz
-            new_row_2[5] = J
+            new_row_2[1] = G
+            new_row_2[2] = v
+            new_row_2[3] = t
             if DEBUG: print(new_row_1,new_row_2)
             edge_matrix = np.vstack([edge_matrix, new_row_1])
             properties = np.vstack([properties, new_row_2])
+            # print(coorelement)
+            # print(coormat)
             coormat = np.vstack([coormat, coorelement])
             i += 1
         edge_matrix = np.delete(edge_matrix, 0, 0) # find better way to initialize (redundant)
@@ -244,7 +425,7 @@ class NodeShellTri(Node, NodeSolverBase):
         coormat = np.delete(coormat, 0, 0)
         if DEBUG: print('edge_matrix',edge_matrix)
         if DEBUG: print('properties',properties)
-        print(edge_matrix.shape)
+        # print(edge_matrix.shape)
         max = (edge_matrix[:,1:].max() + 1) * 6
         if DEBUG: print(max)
 
@@ -254,7 +435,9 @@ class NodeShellTri(Node, NodeSolverBase):
         K=np.zeros((max,max))
         for e in range(len(edge_matrix)):
             # print(e)
-            k = self.ElementStiffnessMatrix(properties)
+            # print("coormat", coormat)
+            # print("1", coormat[e, 0])
+            k = self.ElementStiffnessMatrix(properties, coormat[e, :], edge_matrix, e)
             # print(k)
 
             K= self.SpaceTrussAssemble(K, k, edge_matrix[e,0], edge_matrix[e,6])
@@ -262,6 +445,7 @@ class NodeShellTri(Node, NodeSolverBase):
             # for i in range(12):
             #     for j in range(12):
             #         pass
+            # print("k", k)
 
         # print("global:")
         # print(K)
@@ -285,10 +469,10 @@ class NodeShellTri(Node, NodeSolverBase):
         # # print("shape:", K.shape)
         # # print("K", K)
 
-        bool = ((self.get_value(input_socket_10)))
+        bool = ((self.get_value(input_socket_7)))
         bool = np.invert(bool)
         
-        F = self.get_value(input_socket_11)
+        F = self.get_value(input_socket_8)
         # print("Force:", F)
         bool = np.ravel(bool)
         # print("bool after", bool)
@@ -301,6 +485,8 @@ class NodeShellTri(Node, NodeSolverBase):
         # apply boundary conditions
         Ksolve = K[boolv,boolh]
         F = F[boolv]
+        # print(Ksolve)
+        # print(F)
         if DEBUG: print(F.shape)
         F= np.reshape(F, (-1,1))
         # F=F[1:6,:]
