@@ -71,12 +71,17 @@ class NodeSolverBase(NodeBase):
     def draw_buttons_ext(self, context, layout):
         super().draw_buttons_ext(context, layout)
         layout.operator("node.object_update", text="update objects")
+        layout.operator("node.test", text="TEST")
         layout.prop(self, "material_input", text="")
         layout.prop(self, "size_input", text="")
         layout.prop(self, "buffer", text="Buffer")
 
     def update_value(self, context):
         print("yay")
+
+    def test(self):
+        print("test")
+        pass
 
 
     def update_object(self):
@@ -112,4 +117,19 @@ class UpdateObjectNodeOperator(Operator):
         # node = [i for i in bpy.data.node_groups[bpy.context.space_data.node_tree.name].nodes if i.bl_idname == "Outputnode"][0]
         node = context.active_node
         node.update_object()
+        return{'FINISHED'}
+
+class TestNodeOperator(Operator):
+    """Add a simple box mesh"""
+    bl_idname = "node.test"
+    bl_label = "Test"
+
+    # node_group_name = StringProperty()
+
+    node = None
+
+    def execute(self, context):
+        # node = [i for i in bpy.data.node_groups[bpy.context.space_data.node_tree.name].nodes if i.bl_idname == "Outputnode"][0]
+        node = context.active_node
+        node.test()
         return{'FINISHED'}

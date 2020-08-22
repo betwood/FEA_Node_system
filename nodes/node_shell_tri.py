@@ -17,6 +17,7 @@ from .node_base import NodeBase
 # from ..sockets.socket_matrix import SocketMatrix
 
 DEBUG = False
+DEBUG2 = False
 TIME = True
 
 class NodeShellTri(Node, NodeSolverBase):
@@ -71,12 +72,47 @@ class NodeShellTri(Node, NodeSolverBase):
         print("updated")
         return None
 
-    def CSTElement(self, properties, coorloc, e):
+    def test(self):
+        coor = np.array([
+            [.125, .375, 0],
+            [0, 0.5, 0],
+            [0, .25, 0]
+        ])
+        property = np.array([[210000000, 0, .3, .025]])
+        kcst = self.CSTElement(property, coor)
+
+        i = [2, 3, 4, 5, 0, 1]
+        test = self.reorder(kcst, i)
+        print(test)
+
+        
+        # print(kcst)
+        # ob = bpy.context.active_object
+        # me = ob.data
+        # bm = bmesh.from_edit_mesh(me)
+
+        # coordinates = np.zeros((3,3))
+        # coorelement = []
+        # for f in bm.faces:
+        #     print(f.index)
+        #     coorelement = []
+        #     for vert in f.verts:
+        # #           v = loop.vert
+        #         # print(v.index, v.co[0], v.co[1], v.co[2])
+        #         coordinates = np.array([vert.co[0], vert.co[1], vert.co[2]])
+        #         coorelement = np.hstack([coorelement, coordinates])
+        #         print(vert.index, coorelement)
+
+
+    def CSTElement(self, properties, coorloc):
         # print(properties)
         # print(properties.shape)
         t = properties[0, 3]
+        if DEBUG2: print(t)
         Eprop = properties[0, 0]
+        if DEBUG2: print(Eprop)
         v = properties[0, 2]
+        if DEBUG2: print(v)
         # print(v ** 2)
         E = (Eprop / (1 - v ** 2)) * np.array([[1, v, 0], [v, 1, 0], [0, 0, (1 - v) / 2]])
         # print("E", E)
@@ -93,12 +129,14 @@ class NodeShellTri(Node, NodeSolverBase):
         y3 = coorloc[2, 1]
 
         A = (x1 * (y2 - y3) + x2 * (y3 - y1) + x3 * (y1 - y2)) / 2
+        print(A)
 
-        B = np.array(
+        B = (1 / (2 * A)) * np.array(
             [[y2 - y3, 0, y3 - y1, 0, y1 - y2, 0],
             [0, x3 - x2, 0, x1 - x3, 0, x2 - x1],
             [x3 - x2, y2 - y3, x1 - x3, y3 - y1, x2 - x1, y1 - y2]]
         )
+        if DEBUG2: print(B)
         
         k = t * A * np.dot(np.dot(np.transpose(B), E), B)
         return k
@@ -231,18 +269,17 @@ class NodeShellTri(Node, NodeSolverBase):
         zj = (coormat[5] + coormat[8])/2
         zk = (coormat[2] + coormat[8])/2
         zi = (coormat[2] + coormat[5])/2
-        Vx = np.array([xj - xk, yj - yk, zj - zk])
-        Vr = np.array([coormat[6] - xi, coormat[7] - yi, coormat[8] - zi])
+        Vx = np.array([[xj - xk], [yj - yk], [zj - zk]])
+        Vr = np.array([[coormat[6] - xi], [coormat[7] - yi], [coormat[8] - zi]])
         # print(Vx.shape)
         # print(Vr.shape)
-        Vz = np.cross(Vx, Vr)
-        Vy = np.cross(Vz, Vx)
+        Vz = np.cross(Vx, Vr, axis=0)
+        Vy = np.cross(Vz, Vx, axis=0)
         lx = self.normalize(Vx)
         ly = self.normalize(Vy)
         lz = self.normalize(Vz)
-        transform = np.array(
-            [lx, ly, lz]
-        )
+        transform = np.hstack([lx, ly, lz])
+        # transform = transform.reshape(3,3)
         # print("transform", transform)
         coorloc = np.zeros((3,3))
         # print(coorloc)
@@ -256,7 +293,14 @@ class NodeShellTri(Node, NodeSolverBase):
         coorloc[0, :] = np.dot(transposet, coormat[0:3])
         coorloc[1, :] = np.dot(transposet, coormat[3:6])
         coorloc[2, :] = np.dot(transposet, coormat[6:9])
-        kcst = self.CSTElement(properties, coorloc, e)
+
+        # create non  local coordinates for testing
+        # coorloc[0, :] = coormat[0:3]
+        # coorloc[1, :] = coormat[3:6]
+        # coorloc[2, :] = coormat[6:9]
+        # print("coorloc", coorloc)
+
+        kcst = self.CSTElement(properties, coorloc)
         kdkt = self.DKTElement(properties, coorloc)
         # print("!!!!!")
         # print(kcst)
@@ -289,41 +333,97 @@ class NodeShellTri(Node, NodeSolverBase):
         # k3 = np.concatenate((np.zeros((3,15)), kdrill), axis=0)
         # k = np.concatenate((k1, k2, k3), axis=1)
         z = np.zeros((3,3))
-        T1 = np.concatenate((transform, z, z, z, z, z), axis=0)
-        T2 = np.concatenate((z, transform, z, z, z, z), axis=0)
-        T3 = np.concatenate((z, z, transform, z, z, z), axis=0)
-        T4 = np.concatenate((z, z, z, transform, z, z), axis=0)
-        T5 = np.concatenate((z, z, z, z, transform, z), axis=0)
-        T6 = np.concatenate((z, z, z, z, z, transform), axis=0)
+        T1 = np.concatenate((transposet, z, z, z, z, z), axis=0)
+        T2 = np.concatenate((z, transposet, z, z, z, z), axis=0)
+        T3 = np.concatenate((z, z, transposet, z, z, z), axis=0)
+        T4 = np.concatenate((z, z, z, transposet, z, z), axis=0)
+        T5 = np.concatenate((z, z, z, z, transposet, z), axis=0)
+        T6 = np.concatenate((z, z, z, z, z, transposet), axis=0)
         T = np.concatenate((T1, T2, T3, T4, T5, T6), axis = 1)
         K = np.dot(np.dot(np.transpose(T), k), T)
-
+        # print(K)
+        bool = [True, True, False, False, False, False,True, True, False, False, False, False,True, True, False, False, False, False]
+        boolv,boolh = np.ix_(bool, bool)
+        cstdebug = K[boolv, boolh]
+        print(cstdebug)
+        i = np.array([
+            [2, 3, 4, 5, 0, 1],
+            [2, 3, 4, 5, 0, 1],
+            [2, 3, 4, 5, 0, 1],
+            [0, 1, 2, 3, 4, 5],
+            [2, 3, 4, 5, 0, 1],
+            [4, 5, 0, 1, 2, 3],
+            [4, 5, 0, 1, 2, 3],
+            [0, 1, 2, 3, 4, 5],
+            [0, 1, 2, 3, 4, 5],
+            [0, 1, 2, 3, 4, 5],
+            [2, 3, 4, 5, 0, 1],
+            [2, 3, 4, 5, 0, 1],
+            ])
+        self.reorder(cstdebug, i[e, :])
         return K
 
+    def reorder(self, cst, i):
+        temp = cst[:, i]
+        ele_new = temp[i, :]
+        print("ele", ele_new)
+        
 
-    def SpaceTrussAssemble(self, K,k,i,j):
+    def cstassembletest(self, K, k, v_num):
+        bool = [True, True, False, False, False, False,True, True, False, False, False, False,True, True, False, False, False, False]
+        boolv,boolh = np.ix_(bool, bool)
+        kcst = k[boolv, boolh]
+        for val1 in range(6):
+            for val2 in range(6):
+                # index1 = 6 * v_num[i] + val1
+                # index2 = 6 * v_num[j] + val2
+                if val1 <= 1:
+                    index1 = 2 * v_num[0] + val1
+                elif val1 <= 3:
+                    index1 = 2 * v_num[1] + (val1 - 2)
+                else:
+                    index1 = 2 * v_num[2] + (val1 - 4)
+
+                if val2 <= 1:
+                    index2 = 2 * v_num[0] + val2
+                elif val2 <= 3:
+                    index2 = 2 * v_num[1] + (val2 - 2)
+                else:
+                    index2 = 2 * v_num[2] + (val2 - 4)
+
+                K[index1][index2] += kcst[val1][val2]
+        print(K)
+        return K
+
+    def SpaceTrussAssemble(self, K,k, v_num):
         # puts together stiffness matrix
             #need to look up if there  is a better way of doing this
         
+        # for i in range(3):
+        #     for j in range(3):
         for val1 in range(18):
             for val2 in range(18):
+                # index1 = 6 * v_num[i] + val1
+                # index2 = 6 * v_num[j] + val2
                 if val1 <= 5:
-                    index1 = 6 * i + val1
+                    index1 = 6 * v_num[0] + val1
                 elif val1 <= 11:
-                    index1 = 6 * j + (val1 - 6)
+                    index1 = 6 * v_num[1] + (val1 - 6)
                 else:
-                    index1 = 6 * j + (val1 - 12)
+                    index1 = 6 * v_num[2] + (val1 - 12)
 
                 if val2 <= 5:
-                    index2 = 6 * i + val2
+                    index2 = 6 * v_num[0] + val2
                 elif val2 <= 11:
-                    index2 = 6 * j + (val2 - 6)
+                    index2 = 6 * v_num[1] + (val2 - 6)
                 else:
-                    index2 = 6 * j + (val1 - 12)
+                    index2 = 6 * v_num[2] + (val2 - 12)
 
                 K[index1][index2] += k[val1][val2]
-        if DEBUG: print(K)
-        
+        # print(K)
+        bool = [True, True, False, False, False, False,True, True, False, False, False, False,True, True, False, False, False, False,True, True, False, False, False, False]
+        boolv,boolh = np.ix_(bool, bool)
+        cstdebug = K[boolv, boolh]
         return K
 
     def eval(self):
@@ -390,24 +490,25 @@ class NodeShellTri(Node, NodeSolverBase):
             # column 3 = y moment of inertia
             # column 4 = z moment of inertia
             # column 5 = J
-        edge_matrix = np.zeros((18), dtype=int)
+        edge_matrix = np.zeros((3), dtype=int)
         properties = [0,0,0,0,0,0]
         coormat = np.zeros((9))
-        new_row_1 = edge_matrix
+        new_row_1 = np.zeros((3), dtype=int)
         new_row_2 = properties
         i = 0
         G = 0
+
         for face in bm.faces:
             j = 0
             coorelement = np.array([])
-            for loop in face.loops:
-                vert = loop.vert
+            print(face.index)
+            for vert in face.verts:
+                # vert = loop.vert
                 coordinates = np.array([vert.co[0], vert.co[1], vert.co[2]])
                 coorelement = np.hstack([coorelement, coordinates])
-
-                for i in range(6):
-                    new_row_1[j] = vert.index
-                    j = j + 1
+                new_row_1[j] = vert.index
+                j = j + 1
+                print(vert.index, coordinates)
 
             new_row_2[0] = E
             new_row_2[1] = G
@@ -423,6 +524,7 @@ class NodeShellTri(Node, NodeSolverBase):
         edge_matrix = np.delete(edge_matrix, 0, 0) # find better way to initialize (redundant)
         properties = np.delete(properties, 0, 0)
         coormat = np.delete(coormat, 0, 0)
+        print(coormat)
         if DEBUG: print('edge_matrix',edge_matrix)
         if DEBUG: print('properties',properties)
         # print(edge_matrix.shape)
@@ -433,6 +535,7 @@ class NodeShellTri(Node, NodeSolverBase):
         bm.edges.ensure_lookup_table()
         # k = np.zeros((12,12))
         K=np.zeros((max,max))
+        Kcst=np.zeros((22, 22))
         for e in range(len(edge_matrix)):
             # print(e)
             # print("coormat", coormat)
@@ -440,7 +543,9 @@ class NodeShellTri(Node, NodeSolverBase):
             k = self.ElementStiffnessMatrix(properties, coormat[e, :], edge_matrix, e)
             # print(k)
 
-            K= self.SpaceTrussAssemble(K, k, edge_matrix[e,0], edge_matrix[e,6])
+            K= self.SpaceTrussAssemble(K, k, edge_matrix[e, :])
+            # Kcst = self.cstassembletest(Kcst, k, edge_matrix[e,:])
+            print("e", e)
 
             # for i in range(12):
             #     for j in range(12):
@@ -491,7 +596,7 @@ class NodeShellTri(Node, NodeSolverBase):
         F= np.reshape(F, (-1,1))
         # F=F[1:6,:]
         print('applying boundary conditions')
-        # print(Ksolve)
+        if DEBUG2: print(Ksolve)
         # print(F)
 
         # solve for displacement

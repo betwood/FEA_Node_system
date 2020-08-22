@@ -93,12 +93,13 @@ class NodeValueOutput(Node, NodeBase):
                 disp[i] = math.sqrt(U[3 * i] ** 2 + U[3 * i + 1] ** 2 + U[3 * i + 2] ** 2)
 
         # print("disp", disp)
-        self.x = U[self.vertex * 3]
-        self.y = U[self.vertex * 3 + 1]
-        self.z = U[self.vertex * 3 + 2]
+        self.x = U[self.vertex * 6]
+        self.y = U[self.vertex * 6 + 1]
+        self.z = U[self.vertex * 6 + 2]
 
-        print(U[self.vertex * 3])
-        print(U[self.vertex * 3 + 1])
-        print(U[self.vertex * 3 + 2])
+        print(U[self.vertex * 6])
+        print(U[self.vertex * 6 + 1])
+        print(U[self.vertex * 6 + 2])
+        print(U)
         
         return
