@@ -21,12 +21,12 @@ DEBUG = False
 DEBUG2 = False
 TIME = True
 
-class NodeShellTri(Node, NodeSolverBase):
+class NodeShellQuad(Node, NodeSolverBase):
 
     # Optional identifier string. If not explicitly defined, the python class name is used.
-    bl_idname = 'TriShellNode'
+    bl_idname = 'QuadShellNode'
     # Label for nice name display
-    bl_label = "Shell Tri node"
+    bl_label = "Shell Quad node"
 
     E: bpy.props.FloatProperty(default=21000000)
     v: bpy.props.FloatProperty(default=.3)
@@ -74,40 +74,50 @@ class NodeShellTri(Node, NodeSolverBase):
         return None
 
     def test(self):
-        coor1 = np.array([
-            [-4, -4, 0],
-            [4, -4, 0],
-            [-4, 4, 0]
+        coor = np.array([
+            [0,0,0],
+            [0.25,0,0],
+            [.25,.25,0],
+            [0,.25,0]
         ])
-        coor2 = np.array([
-            [-4, 4, 0],
-            [4, -4, 0],
-            [4, 4, 0]
-        ])
-        v_num1 = np.array([0,1,2])
-        v_num2 = np.array([2,1,3])
-        property = np.array([[10000, 0, .3, 1]])
-        K = np.zeros((12,12))
-        kdkt1 = self.DKTElement(property, coor1)
-        bool = [False, False, False, False, False, False, True, True, True]
-        boolv,boolh = np.ix_(bool, bool)
-        d1 = kdkt1[boolv, boolh]
-        solve = kdkt1[boolv, boolh]
-        kdkt2 = self.DKTElement(property, coor2)
-        bool = [True, True, True, False, False, False, False, False, False]
-        boolv,boolh = np.ix_(bool, bool)
-        solve += kdkt2[boolv, boolh]
-        K = self.DKTAssemble(K,kdkt1, v_num1)
-        K = self.DKTAssemble(K,kdkt2, v_num2)
-        bool = [False, False, False, False, False, False, True, True, True, False, False, False]
-        boolv,boolh = np.ix_(bool, bool)
-        Ksolve = K[boolv, boolh]
-        F = np.array([[5], [0], [0]])
-        Ksolve_csr = sparse.csr_matrix(Ksolve)
-        F_csr = sparse.csr_matrix(F)
-        print('solving')
-        u = scipy.sparse.linalg.spsolve(Ksolve_csr, F_csr)
-        print('solving done')
+        property = np.array([[210000000, 0, .3, .025]])
+        cst = self.CSTElement(property, coor)
+        print(cst)
+        
+        # coor1 = np.array([
+        #     [-4, -4, 0],
+        #     [4, -4, 0],
+        #     [-4, 4, 0]
+        # ])
+        # coor2 = np.array([
+        #     [-4, 4, 0],
+        #     [4, -4, 0],
+        #     [4, 4, 0]
+        # ])
+        # v_num1 = np.array([0,1,2])
+        # v_num2 = np.array([2,1,3])
+        # property = np.array([[10000, 0, .3, 1]])
+        # K = np.zeros((12,12))
+        # kdkt1 = self.DKTElement(property, coor1)
+        # bool = [False, False, False, False, False, False, True, True, True]
+        # boolv,boolh = np.ix_(bool, bool)
+        # d1 = kdkt1[boolv, boolh]
+        # solve = kdkt1[boolv, boolh]
+        # kdkt2 = self.DKTElement(property, coor2)
+        # bool = [True, True, True, False, False, False, False, False, False]
+        # boolv,boolh = np.ix_(bool, bool)
+        # solve += kdkt2[boolv, boolh]
+        # K = self.DKTAssemble(K,kdkt1, v_num1)
+        # K = self.DKTAssemble(K,kdkt2, v_num2)
+        # bool = [False, False, False, False, False, False, True, True, True, False, False, False]
+        # boolv,boolh = np.ix_(bool, bool)
+        # Ksolve = K[boolv, boolh]
+        # F = np.array([[5], [0], [0]])
+        # Ksolve_csr = sparse.csr_matrix(Ksolve)
+        # F_csr = sparse.csr_matrix(F)
+        # print('solving')
+        # u = scipy.sparse.linalg.spsolve(Ksolve_csr, F_csr)
+        # print('solving done')
 
 
     def DKTAssemble(self, K, k, v_num):
@@ -190,19 +200,29 @@ class NodeShellTri(Node, NodeSolverBase):
         #         # print(v.index, v.co[0], v.co[1], v.co[2])
         #         coordinates = np.array([vert.co[0], vert.co[1], vert.co[2]])
         #         coorelement = np.hstack([coorelement, coordinates])
-        #         print(vert.index, coorelement)
-
+        #         print(vert.index, coorelement
+    def detJ(self, z, n, coorloc):
+        x = np.array([coorloc[0,0], coorloc[1,0], coorloc[2,0], coorloc[3,0]])
+        y = np.array([
+            [coorloc[0,1]],
+            [coorloc[1,1]],
+            [coorloc[2,1]],
+            [coorloc[3,1]],
+        ])
+        J = np.array([
+            [0, 1 - n, n - z, z - 1],
+            [n - 1, 0, z + 1, -z - n],
+            [z - n, -z - 1, 0, n + 1],
+            [1 - z, z + n, -n - 1, 0]
+        ])
+        detJ = (1/8) * np.dot(np.dot(x, J), y)
+        return detJ
 
     def CSTElement(self, properties, coorloc):
-        # print(properties)
-        # print(properties.shape)
         t = properties[0, 3]
-        if DEBUG2: print(t)
         Eprop = properties[0, 0]
-        if DEBUG2: print(Eprop)
         v = properties[0, 2]
-        if DEBUG2: print(v)
-        # print(v ** 2)
+
         E = (Eprop / (1 - v ** 2)) * np.array([[1, v, 0], [v, 1, 0], [0, 0, (1 - v) / 2]])
         # print("E", E)
         #not right need local space values here also based on element not edge
@@ -213,22 +233,58 @@ class NodeShellTri(Node, NodeSolverBase):
         x1 = coorloc[0, 0]
         x2 = coorloc[1, 0]
         x3 = coorloc[2, 0]
+        x4 = coorloc[3, 0]
         y1 = coorloc[0, 1]
         y2 = coorloc[1, 1]
         y3 = coorloc[2, 1]
+        y4 = coorloc[3, 1]
 
-        A = (x1 * (y2 - y3) + x2 * (y3 - y1) + x3 * (y1 - y2)) / 2
-        print(A)
+        # A = (x1 * (y2 - y3) + x2 * (y3 - y1) + x3 * (y1 - y2)) / 2
+        # print(A)
 
-        B = (1 / (2 * A)) * np.array(
-            [[y2 - y3, 0, y3 - y1, 0, y1 - y2, 0],
-            [0, x3 - x2, 0, x1 - x3, 0, x2 - x1],
-            [x3 - x2, y2 - y3, x1 - x3, y3 - y1, x2 - x1, y1 - y2]]
-        )
-        if DEBUG2: print(B)
-        
-        k = t * A * np.dot(np.dot(np.transpose(B), E), B)
-        return k
+        # B = (1 / (2 * A)) * np.array(
+        #     [[y2 - y3, 0, y3 - y1, 0, y1 - y2, 0],
+        #     [0, x3 - x2, 0, x1 - x3, 0, x2 - x1],
+        #     [x3 - x2, y2 - y3, x1 - x3, y3 - y1, x2 - x1, y1 - y2]]
+        # )
+        # if DEBUG2: print(B)
+        roots = np.array([-1/(3 ** .5), 1/(3 ** .5)])
+        wj = 1
+        wi = 1
+        k = np.zeros((8,8))
+        for j in range(2):
+            for i in range(2):
+                z = roots[i]
+                n = roots[j]
+                dn1dz = - (1 - n)/4
+                dn1dn = - (1 - z)/4
+                dn2dz = (1 - n)/4
+                dn2dn = - (1 + z)/4
+                dn3dz = (1 + n)/4
+                dn3dn = (1 + z)/4
+                dn4dz = -(1 + n)/4
+                dn4dn = (1 - z)/4
+                J11 = dn1dz * x1 + dn2dz * x2 + dn3dz * x3 + dn4dz * x4
+                J12 = dn1dz * y1 + dn2dz * y2 + dn3dz * y3 + dn4dz * y4
+                J21 = dn1dn * x1 + dn2dn * x2 + dn3dn * x3 + dn4dn * x4
+                J22 = dn1dn * y1 + dn2dn * y2 + dn3dn * y3 + dn4dn * y4
+                detJ = J11 * J22 - J12 * J21
+                A = (1/detJ) * np.array([
+                    [J22, -J12, 0, 0],
+                    [0, 0, -J21, J11],
+                    [-J21, J11, J22, -J12]
+                ])
+                G = np.array([
+                    [dn1dz, 0, dn2dz, 0, dn3dz, 0, dn4dz, 0],
+                    [dn1dn, 0, dn2dn, 0, dn3dn, 0, dn4dn, 0],
+                    [0, dn1dz, 0, dn2dz, 0, dn3dz, 0, dn4dz],
+                    [0, dn1dn, 0, dn2dn, 0, dn3dn, 0, dn4dn]
+                ])
+
+                B = np.dot(A, G)
+
+                k += wi * wj * np.dot(np.dot(np.transpose(B), E), B) * detJ
+        return t * k
 
     def Geometry(self, coorloc):
         x23 = coorloc[1, 0] - coorloc[2, 0]
@@ -677,13 +733,12 @@ class NodeShellTri(Node, NodeSolverBase):
             # print(e)
             # print("coormat", coormat)
             # print("1", coormat[e, 0])
-            k = self.ElementStiffnessMatrix(properties, coormat[e, :], edge_matrix, e)
+            # k = self.ElementStiffnessMatrix(properties, coormat[e, :], edge_matrix, e)
             # print(k)
+            k = self.CSTElement(properties, coormat[e,:])
 
-            K = self.SpaceTrussAssemble(K, k, edge_matrix[e, :])
-            # Kcst = self.cstassembletest(Kcst, k, edge_matrix[e,:])
-            print("e", e)
-            K2 = self.test()
+            # K = self.SpaceTrussAssemble(K, k, edge_matrix[e, :])
+            K = self.cstassembletest(K, k, edge_matrix[e,:])
             # for i in range(18):
             #     print("K:", K[i,:])
             #     print("K2:", K2[i,:])

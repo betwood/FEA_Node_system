@@ -72,6 +72,7 @@ node_categories = [
         NodeItem("SpaceTrussNode"),
         NodeItem("SpaceFrameNode"),
         NodeItem("TriShellNode"),
+        NodeItem("QuadShellNode"),
     ]),
 ]
 
