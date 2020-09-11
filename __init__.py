@@ -70,6 +70,7 @@ node_categories = [
     MyNodeCategory('SOLVERS', "solvers", items=[
         NodeItem("SpaceTrussNode"),
         NodeItem("SpaceFrameNode"),
+        NodeItem("PlaneTrussNodeDynamic"),
     ]),
 ]
 

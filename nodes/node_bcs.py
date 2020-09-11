@@ -62,6 +62,8 @@ class BCInput(Node, NodeBase):
         # look at vertex group for boundary conditions
         if self.solve_type == "1DFRAME":
             self.max_mult = 6
+        elif self.solve_type == "2DTruss":
+            self.max_mult = 2
         else:
             self.max_mult = 3
         
@@ -77,7 +79,10 @@ class BCInput(Node, NodeBase):
                     # any vertex that is a fixed boundary condition is set to 1
                     vs[i] = self.x
                     vs[i + 1] = self.y
-                    vs[i + 2] = self.z
+                    
+                    if not self.solve_type == "2DTruss":
+                        vs[i + 2] = self.z
+                    
                     if self.solve_type == "1DFRAME":
                         vs[i + 3] = self.mom_x
                         vs[i + 4] = self.mom_y

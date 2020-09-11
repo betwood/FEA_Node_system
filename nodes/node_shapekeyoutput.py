@@ -20,7 +20,8 @@ class NodeShapekeyOutput(Node, NodeBase):
     bl_label = "Shapekey Output"
 
 
-    sk_index: bpy.props.IntProperty(min=0, max=5)
+    sk_index: bpy.props.IntProperty(min=0)
+    mult: bpy.props.FloatProperty(min=0)
     
     def init(self, context):
         self.inputs.new('SocketTypeMatrix', "output")
@@ -28,6 +29,7 @@ class NodeShapekeyOutput(Node, NodeBase):
 
     def draw_buttons(self, context, layout):
         layout.prop(self, "sk_index", text="shape key index")
+        layout.prop(self, "mult", text="multiplier")
         # self.eval()
         # col = layout.column()
         # col.prop_search(self, "object", context.scene, "objects")
@@ -51,6 +53,7 @@ class NodeShapekeyOutput(Node, NodeBase):
 
         # get inputs from previous nodes
         U = self.get_value(input_socket_1)
+        U *= self.mult
         # print(U)
 
         # get basis shape key
@@ -63,9 +66,16 @@ class NodeShapekeyOutput(Node, NodeBase):
 
 
         #apply to mesh
-        for i in range(len(self.object.data.vertices)):
-            if self.solve_type == "1DFRAME":
-                sk.data[i].co = sk_basis.data[i].co + mathutils.Vector((U[6*i], U[6*i+1], U[6*i+2]))
-            else:
-                sk.data[i].co = sk_basis.data[i].co + mathutils.Vector((U[3*i], U[3*i+1], U[3*i+2]))
+        for j in range(0, U.shape[1]):
+            self.object.active_shape_key_index = self.sk_index + j
+            sk = self.object.active_shape_key
+            for i in range(len(self.object.data.vertices)):
+                if self.solve_type == "1DFRAME":
+                    sk.data[i].co = sk_basis.data[i].co + mathutils.Vector((U[6*i], U[6*i+1], U[6*i+2]))
+                
+                elif self.solve_type == "2DTruss":
+                    sk.data[i].co = sk_basis.data[i].co + mathutils.Vector((U[2*i, j], U[2*i+1, j], 0))
+
+                else:
+                    sk.data[i].co = sk_basis.data[i].co + mathutils.Vector((U[3*i], U[3*i+1], U[3*i+2]))
         return

@@ -45,7 +45,7 @@ class ForceInput(Node, NodeBase):
         #             return
         #     else:
         #         self.inputs.remove(i)
-        if self.solve_type == "1DFRAME":
+        if self.solve_type == "1DFRAME" or self.solve_type == "2DTruss":
             self.inputs[1].hide = False
         else:
             self.inputs[1].hide = True
@@ -78,6 +78,8 @@ class ForceInput(Node, NodeBase):
         # look at vertex group for boundary conditions
         if self.solve_type == "1DFRAME":
             self.max_mult = 6
+        elif self.solve_type == "2DTruss":
+            self.max_mult = 2
         else:
             self.max_mult = 3
 
@@ -94,7 +96,9 @@ class ForceInput(Node, NodeBase):
                     # any vertex that is a fixed boundary condition is set to 1
                     F[i] = self.vector[0]
                     F[i + 1] = self.vector[1]
-                    F[i + 2] = self.vector[2]
+                    
+                    if not self.solve_type == "2DTruss":
+                        F[i + 2] = self.vector[2]
                     
                     if self.solve_type == "1DFRAME": # currently only 2 solver types will need to make this more universal later
                         F[i + 3] = self.mom_vector[0]
