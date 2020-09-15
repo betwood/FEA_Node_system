@@ -133,7 +133,65 @@ class NodePlaneTrussDynamic(Node, NodeBase):
                 M[index1][index2] += m[val1][val2]
         return M, K
 
-    def eval(self):
+    def Ksolve(self, E, A, bool, D):
+        boolv,boolh = np.ix_(bool, bool)
+        d = np.zeros((len(bool), 1))
+        j = 0
+        for i in range(len(bool)):
+            if bool[i] == 1:
+                d[i] = D[j]
+                j = j + 1
+        
+        bm = bmesh.new()
+        bm.from_mesh(self.object.data)
+        edge_matrix = [0,0,0]
+        properties = [0,0,0,0]
+        new_row_1 = edge_matrix
+        new_row_2 = properties
+        i = 0
+        for edge in bm.edges:
+            new_row_1[0] = edge.index
+            new_row_1[1] = edge.verts[0].index
+            new_row_1[2] = edge.verts[1].index
+            x1 = edge.verts[0].co[0] + d[edge.verts[0].index * 2]
+            x2 = edge.verts[1].co[0] + d[edge.verts[1].index * 2]
+            y1 = edge.verts[0].co[1] + d[edge.verts[0].index * 2 + 1]
+            y2 = edge.verts[1].co[1] + d[edge.verts[1].index * 2 + 1]
+            new_row_2[0] = ((x2 - x1) ** 2 + (y2 - y1) ** 2) ** .5
+            new_row_2[1] = E
+            new_row_2[2] = A
+            # if edge.verts[1].co[0]-edge.verts[0].co[0] == 0:
+            #     new_row_2[3] = 0
+            # else:
+            new_row_2[3] = np.arctan2((y2 - y1), (x2 - x1))
+
+            if DEBUG: print(new_row_1,new_row_2)
+            edge_matrix = np.vstack([edge_matrix, new_row_1])
+            properties = np.vstack([properties, new_row_2])
+            i += 1
+        edge_matrix = np.delete(edge_matrix, 0, 0)
+        properties = np.delete(properties, 0, 0)
+        if DEBUG: print('edge_matrix',edge_matrix)
+        if DEBUG: print('properties',properties)
+        max = (edge_matrix[:,1:].max() + 1) * 2
+        if DEBUG: print(max)
+
+        # create stiffness matrix
+        k = np.zeros((4,4))
+        m = np.zeros((4,4))
+        K = np.zeros((max, max))
+        M = np.zeros((max, max))
+        for i in range(len(edge_matrix)):
+            [m, k] = self.SpaceTrussElementStiffness(properties[i, 0],properties[i, 1],properties[i, 2],properties[i, 3])
+            
+            [M, K] = self.SpaceTrussAssemble(K, k, edge_matrix[i,1], edge_matrix[i,2], M, m)
+
+        K = K[boolv,boolh]
+        M = M[boolv, boolh]
+        return K, M, max   
+
+
+    def largedispeval(self): # test definition for large displacement will need to reformat
         # set input sockets
         input_socket_1 = self.inputs[0]
         input_socket_2 = self.inputs[1]
@@ -150,7 +208,95 @@ class NodePlaneTrussDynamic(Node, NodeBase):
         self.object = self.get_value(input_socket_3, "object")
         object = self.object
         ob = object.data
-        print(ob)
+        # print(ob)
+
+        
+
+        # get F
+        F = self.get_value(input_socket_5)
+
+        # get boundary conditions
+        bool = ((self.get_value(input_socket_4)))
+        bool = np.invert(bool)
+        bool = np.ravel(bool)
+        boolv,boolh = np.ix_(bool, bool)
+
+        # apply boundary condition on force
+        F = F[boolv]
+        F= np.reshape(F, (-1,1))
+
+
+        # initialize displacement, velocity, and acceleration
+        d = np.zeros((len(F), self.num_t))
+        v = np.zeros((len(F), self.num_t))
+        a = np.zeros((len(F), self.num_t))
+        f = np.zeros((len(F), self.num_t))
+
+        # initial conditions
+        d0 = np.zeros((len(F), 1))
+        d[:, 0] = d0[:, 0]
+        v0 = np.zeros((len(F), 1))
+        v[:, 0] = v0[:, 0]
+        f[:, 0] = F[:, 0]
+        F = f
+
+        t = 0
+        [K, M, max] = self.Ksolve(E, A, bool, d[:, 0])
+        a[:, 0] = np.dot(inv(M), F[:, 0] - np.dot(K, d[:, 0]))
+        for i in range(self.num_t - 1):
+            [K, M, max] = self.Ksolve(E, A, bool, d[:, i])
+            
+            Kp = K + (1/(self.b + self.dt ** 2)) * M
+            p1 = (1/(self.b + self.dt ** 2)) * M
+            p2 = d[:, i] + self.dt * v[:, i] + (.5 - self.b) * self.dt ** 2 * a[:, i]
+            test = np.dot(p1, p2.reshape(-1,1))
+            # print(F[:, i + 1])
+            Fp = F[:, i + 1].reshape(-1,1) + test
+            
+            d[:, i + 1] = np.linalg.solve(Kp, Fp).ravel()
+
+            a[:, i + 1] = (1/(self.b + self.dt ** 2)) * (d[:, i + 1] - d[:, i] - self.dt * v[:, i] - (.5 - self.b) * self.dt ** 2 * a[:, i])
+            
+            v[:, i + 1] = v[:, i] + self.dt * ((1 - self.g) * a[:, i] + self.g * d[:, i + 1])
+        
+        # solve for displacement
+        # u=np.linalg.solve(Ksolve,F)
+        if DEBUG: print(u)
+        bound=np.array([0])
+        U=np.zeros((max, self.num_t))
+        j = 0
+        for i in range(len(U)):
+            if bool[i] == 1:
+                U[i, :] = d[j, :]
+                j = j + 1
+
+        if DEBUG: print(U)
+        print("1")
+        return U
+
+    
+    def eval(self):
+        ld = True
+        if ld == True:
+            U = self.largedispeval()
+            return U
+        # set input sockets
+        input_socket_1 = self.inputs[0]
+        input_socket_2 = self.inputs[1]
+        input_socket_3 = self.inputs[2]
+        input_socket_4 = self.inputs[3]
+        input_socket_5 = self.inputs[4]
+
+        input_socket_1.set_value(self.E)
+        input_socket_2.set_value(self.A)
+
+        # get inputs from previous nodes
+        E = self.get_value(input_socket_1)
+        A = self.get_value(input_socket_2)
+        self.object = self.get_value(input_socket_3, "object")
+        object = self.object
+        ob = object.data
+        
 
         
 
@@ -261,11 +407,9 @@ class NodePlaneTrussDynamic(Node, NodeBase):
             p1 = (1/(self.b + self.dt ** 2)) * M
             p2 = d[:, i] + self.dt * v[:, i] + (.5 - self.b) * self.dt ** 2 * a[:, i]
             test = np.dot(p1, p2.reshape(-1,1))
-            print(F[:, i + 1])
+
             Fp = F[:, i + 1].reshape(-1,1) + test
             
-            print(np.linalg.solve(Kp, Fp))
-            print("inv:", np.dot(inv(Kp), Fp))
             d[:, i + 1] = np.linalg.solve(Kp, Fp).ravel()
 
             a[:, i + 1] = (1/(self.b + self.dt ** 2)) * (d[:, i + 1] - d[:, i] - self.dt * v[:, i] - (.5 - self.b) * self.dt ** 2 * a[:, i])
