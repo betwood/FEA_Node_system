@@ -113,7 +113,6 @@ class NodeGenericOutput(Node, NodeBase):
         self.object.active_shape_key_index = self.sk_index
         sk = self.object.active_shape_key
         key = sk.name
-        print(key)
         var.targets[0].data_path = 'key_blocks["' + key + '"].value'
 
         driver.expression = "var"
@@ -155,10 +154,6 @@ class NodeGenericOutput(Node, NodeBase):
         self.object.data.vertex_colors.active_index = self.vc_index
         vc = self.object.data.vertex_colors.active
 
-        # create list of dispacements
-        print(len(U) / 3)
-        print(len(U))
-
         if self.solve_type == "1DFRAME":
             disp = np.zeros(int(len(U) / 6))
             rot = np.zeros(int(len(U) / 6))
@@ -169,8 +164,6 @@ class NodeGenericOutput(Node, NodeBase):
             disp = np.zeros(int(len(U) / 3))
             for i in range(len(disp)):
                 disp[i] = math.sqrt(U[3 * i] ** 2 + U[3 * i + 1] ** 2 + U[3 * i + 2] ** 2)
-
-        print("disp", disp)
 
 
         bm = bmesh.new()

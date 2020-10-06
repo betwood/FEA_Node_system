@@ -20,8 +20,8 @@ class NodeShapekeyOutput(Node, NodeBase):
     bl_label = "Shapekey Output"
 
 
-    sk_index: bpy.props.IntProperty(min=0)
-    mult: bpy.props.FloatProperty(min=0)
+    sk_index: bpy.props.IntProperty(min=0, default=1)
+    mult: bpy.props.FloatProperty(min=.01, default=1)
     
     def init(self, context):
         self.inputs.new('SocketTypeMatrix', "output")
@@ -67,15 +67,22 @@ class NodeShapekeyOutput(Node, NodeBase):
 
         #apply to mesh
         for j in range(0, U.shape[1]):
+            # adds new shape key if none exist
+            if self.sk_index + j >= len(self.object.data.shape_keys.key_blocks):
+                self.object.shape_key_add(from_mix=False)
+
+            # selects shape key
             self.object.active_shape_key_index = self.sk_index + j
             sk = self.object.active_shape_key
+
+            # applies data to shape key depending on solve type
             for i in range(len(self.object.data.vertices)):
                 if self.solve_type == "1DFRAME":
-                    sk.data[i].co = sk_basis.data[i].co + mathutils.Vector((U[6*i], U[6*i+1], U[6*i+2]))
+                    sk.data[i].co = sk_basis.data[i].co + mathutils.Vector((U[6*i, j], U[6*i+1, j], U[6*i+2, j]))
                 
                 elif self.solve_type == "2DTruss":
                     sk.data[i].co = sk_basis.data[i].co + mathutils.Vector((U[2*i, j], U[2*i+1, j], 0))
 
                 else:
-                    sk.data[i].co = sk_basis.data[i].co + mathutils.Vector((U[3*i], U[3*i+1], U[3*i+2]))
+                    sk.data[i].co = sk_basis.data[i].co + mathutils.Vector((U[3*i, j], U[3*i+1, j], U[3*i+2, j]))
         return

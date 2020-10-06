@@ -6,12 +6,14 @@ import math
 import mathutils
 import json
 
+from numpy.linalg import inv
 from timeit import default_timer as timer
 from scipy import sparse
 from scipy import linalg
 from scipy.stats import uniform
 from bpy.types import NodeTree, Node, NodeSocket, Object, Operator
 from .node_base_solver import NodeSolverBase
+from .node_base_solver_dynamic import NodeDynamicSolverBase
 from .node_base import NodeBase
 # from ..sockets.socket_object import SocketObject
 # from ..sockets.socket_matrix import SocketMatrix
@@ -19,12 +21,12 @@ from .node_base import NodeBase
 DEBUG = False
 TIME = True
 
-class NodeSpaceFrame(Node, NodeSolverBase):
+class NodeSpaceFrameDynamic(Node, NodeDynamicSolverBase):
 
     # Optional identifier string. If not explicitly defined, the python class name is used.
-    bl_idname = 'SpaceFrameNode'
+    bl_idname = 'SpaceFrameNodeDynamic'
     # Label for nice name display
-    bl_label = "Space Frame node"
+    bl_label = "Space Frame node Dynamic"
 
     E: bpy.props.FloatProperty(default=21000000)
     A: bpy.props.FloatProperty(default=.1)
@@ -36,6 +38,15 @@ class NodeSpaceFrame(Node, NodeSolverBase):
     object: bpy.props.PointerProperty(type=Object)
     solver_type: bpy.props.StringProperty(default="1DFRAME")
     disp: bpy.props.StringProperty(default="")
+    rho: bpy.props.FloatProperty(default=.1)
+    num_t: bpy.props.IntProperty(default=20)
+    dt: bpy.props.FloatProperty(default=.1)
+    d0: bpy.props.FloatProperty(default=0)
+    v0: bpy.props.FloatProperty(default=0)
+    b: bpy.props.FloatProperty(default=1/6, min=0, max=1/2)
+    g: bpy.props.FloatProperty(default=1/2)
+    h: bpy.props.FloatProperty(default=.1)
+    
 
     
 
@@ -116,6 +127,35 @@ class NodeSpaceFrame(Node, NodeSolverBase):
             [0, 0, -w7, 0, w9, 0, 0, 0, w7, 0, w8, 0],
             [0, w3, 0, 0, 0, w5, 0, -w3, 0, 0, 0, w4]
         ])
+        a = L/2
+        self.Ix = self.h ** 3 * L / 12
+        rx = self.Ix / A
+        v1 = 70
+        v2 = 78
+        v3 = 70 * rx
+        v4 = 8 * a ** 2
+        v5 = 22 * a
+        v6 = 35
+        v7 = 27
+        v8 = 13 * a
+        v9 = -35 * rx
+        v10 = -6 * a ** 2
+
+        mprime = (self.rho * A * a) / 105 * np.array([
+            [v1, 0, 0, 0, 0, 0, v6, 0, 0, 0, 0, 0],
+            [0, v2, 0, 0, 0, v5, 0, v7, 0, 0, 0, -v8],
+            [0, 0, v2, 0, -v5, 0, 0, 0, v7, 0, v8, 0],
+            [0, 0, 0, v3, 0, 0, 0, 0, 0, v9, 0, 0],
+            [0, 0, -v5, 0, v4, 0, 0, 0, -v8, 0, v10, 0],
+            [0, v5, 0, 0, 0, v4, 0, v8, 0, 0, 0, v10],
+            [v6, 0, 0, 0, 0, 0, v1, 0, 0, 0, 0, 0],
+            [0, v7, 0, 0, 0, v8, 0, v2, 0, 0, 0, -v5],
+            [0, 0, v7, 0, -v8, 0, 0, 0, v2, 0, v5, 0],
+            [0, 0, 0, v9, 0, 0, 0, 0, 0, v3, 0, 0],
+            [0, 0, v8, 0, v10, 0, 0, 0, v5, 0, v4, 0],
+            [0, -v8, 0, 0, 0, v10, 0, -v5, 0, 0, 0, v4]
+        ])
+
         if DEBUG: print("kprime", kprime)
         if x1 == x2 and y1 == y2:
             if z2 > z1:
@@ -160,8 +200,9 @@ class NodeSpaceFrame(Node, NodeSolverBase):
         if DEBUG: print("R:", R, "shape:", R.shape)
         out = np.dot(Rp, kprime)
         out = np.dot(out, R)
+        m = np.dot(np.dot(Rp, mprime), R)
         if DEBUG: print(out)
-        return out
+        return m, out
 
     def SpaceTrussAssemble(self, K,k,i,j):
         # puts together stiffness matrix
@@ -213,6 +254,8 @@ class NodeSpaceFrame(Node, NodeSolverBase):
         input_socket_7.set_value(self.J)
 
         # get inputs from previous nodes
+        print("!!!")
+        print(self.material_input)
         if self.material_input == "VALUE":
             E = self.get_value(input_socket_1)
             G = self.get_value(input_socket_4)
@@ -287,20 +330,17 @@ class NodeSpaceFrame(Node, NodeSolverBase):
         max = (edge_matrix[:,1:].max() + 1) * 6
         if DEBUG: print(max)
 
-        # create stiffness matrix
-        k = np.zeros((len(edge_matrix),12,12))
+
+        K = np.zeros((max, max))
+        M = np.zeros((max, max))
         bm.edges.ensure_lookup_table()
         for i in range(len(edge_matrix)):
-            k[i, :, :]=self.SpaceTrussElementStiffness(properties[i, 0],properties[i, 1],properties[i, 2],properties[i, 3],properties[i, 4],properties[i, 5], bm.edges[i].verts[0].co, bm.edges[i].verts[1].co)
-        if DEBUG: print(k.shape)
-
-        # create global stiffness matrix
-        if TIME: assem_start = timer()
-        K=np.zeros((max,max))
-        for i in range(len(edge_matrix)):        
-            K=self.SpaceTrussAssemble(K,k[i, :, :],edge_matrix[i,1],edge_matrix[i,2])
-        if TIME: assem_end = timer()
-        print("space truss assemble", assem_end - assem_start)
+            [m, k] = self.SpaceTrussElementStiffness(properties[i, 0],properties[i, 1],properties[i, 2],properties[i, 3],properties[i, 4],properties[i, 5], bm.edges[i].verts[0].co, bm.edges[i].verts[1].co)
+            
+            K = self.SpaceTrussAssemble(K, k, edge_matrix[i,1], edge_matrix[i,2])
+            M = self.SpaceTrussAssemble(M, m, edge_matrix[i,1], edge_matrix[i,2])
+        
+        # create stiffness matrix
         # print("shape:", K.shape)
         # print("K", K)
 
@@ -318,30 +358,64 @@ class NodeSpaceFrame(Node, NodeSolverBase):
         # print(K.shape)
 
         # apply boundary conditions
-        Ksolve = K[boolv,boolh]
+        # apply boundary conditions
+        K = K[boolv,boolh]
+        M = M[boolv,boolh]
         F = F[boolv]
-        if DEBUG: print(F.shape)
         F= np.reshape(F, (-1,1))
-        # F=F[1:6,:]
         print('applying boundary conditions')
         # print(Ksolve)
         # print(F)
 
+
+                # solve for displacement
+        # algorithm for dynamic solution based on newmarks equations
+        
+        # initialize displacement, velocity, and acceleration
+        d = np.zeros((len(F), self.num_t))
+        v = np.zeros((len(F), self.num_t))
+        a = np.zeros((len(F), self.num_t))
+        f = np.zeros((len(F), self.num_t))
+
+        # initial conditions
+        d0 = np.zeros((len(F), 1))
+        d[:, 0] = d0[:, 0]
+        v0 = np.zeros((len(F), 1))
+        v[:, 0] = v0[:, 0]
+        
+        F = self.get_force(F, f)
+
+        t = 0
+        a[:, 0] = np.dot(inv(M), F[:, 0] - np.dot(K, d[:, 0]))
+        for i in range(self.num_t - 1):
+            Kp = K + (1/(self.b + self.dt ** 2)) * M
+            p1 = (1/(self.b + self.dt ** 2)) * M
+            p2 = d[:, i] + self.dt * v[:, i] + (.5 - self.b) * self.dt ** 2 * a[:, i]
+            test = np.dot(p1, p2.reshape(-1,1))
+
+            Fp = F[:, i + 1].reshape(-1,1) + test
+            
+            d[:, i + 1] = np.linalg.solve(Kp, Fp).ravel()
+
+            a[:, i + 1] = (1/(self.b + self.dt ** 2)) * (d[:, i + 1] - d[:, i] - self.dt * v[:, i] - (.5 - self.b) * self.dt ** 2 * a[:, i])
+            
+            v[:, i + 1] = v[:, i] + self.dt * ((1 - self.g) * a[:, i] + self.g * d[:, i + 1])
+
+
         # solve for displacement
-        Ksolve_csr = sparse.csr_matrix(Ksolve)
-        F_csr = sparse.csr_matrix(F)
-        print('solving')
-        u = scipy.sparse.linalg.spsolve(Ksolve_csr, F_csr)
-        print('solving done')
-        if DEBUG: print(u)
+        # Ksolve_csr = sparse.csr_matrix(Ksolve)
+        # F_csr = sparse.csr_matrix(F)
+        # print('solving')
+        # u = scipy.sparse.linalg.spsolve(Ksolve_csr, F_csr)
+        # print('solving done')
+        # if DEBUG: print(u)
         bound=np.array([0])
-        U=np.zeros((max,1))
+        U=np.zeros((max, self.num_t))
         j = 0
         for i in range(len(U)):
             if bool[i] == 1:
-                U[i] = u[j]
+                U[i, :] = d[j, :]
                 j = j + 1
-
         if DEBUG: print(U)
         if TIME: end = timer()
         print("time:", end - start)
@@ -351,35 +425,3 @@ class NodeSpaceFrame(Node, NodeSolverBase):
         self.disp = json.dumps(array)
 
         return U
-                
-        # # caclulate force
-        # F = K.dot(U)
-        # if DEBUG: print(F)
-
-        # sigma = np.zeros([len(edge_matrix)])
-        # # calculate stress
-        # for i in range(len(edge_matrix)):
-        #     store = properties[i,1] / properties[i,0] * np.array([-properties[i,3], -properties[i,4], -properties[i,5], properties[i,3], properties[i,4], properties[i,5]])   
-        #     uvect = np.array([U[3 * edge_matrix[i,1]], U[3 * edge_matrix[i,1] + 1], U[3 * edge_matrix[i,1] + 2], U[3 * edge_matrix[i,2]], U[3 * edge_matrix[i,2] + 1], U[3 * edge_matrix[i,2] + 2]])
-        #     uvect = uvect.reshape(-1,1)
-        #     sigma[i] = store.dot(uvect)
-        #     if DEBUG: print(uvect.shape)
-
-        # if DEBUG: print(sigma)
-
-        # # output colors
-        #     # currently using displacement as output because this can be done on verticies
-        #     # stress output need to find a way to output color to edges
-        # # vcol_output = bm.vertex_colors.new()
-
-        # # for v in bm.vertex:
-            
-
-        # # apply changes
-        # bm.to_mesh(ob)
-        # bm.free() # free and prevent further acess
-
-
-
-        
-        # return object

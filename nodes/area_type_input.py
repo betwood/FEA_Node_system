@@ -19,25 +19,25 @@ class NodeAreaInput(Node, NodeBase):
     bl_label = "Area Input"
 
 
-    r: bpy.props.FloatProperty(default=.1)
-    t: bpy.props.FloatProperty(default=.01)
-    b: bpy.props.FloatProperty(default=.1)
-    h: bpy.props.FloatProperty(default=.1)
+    r: bpy.props.FloatProperty(default=.1) # radius
+    t: bpy.props.FloatProperty(default=.01) # thickness
+    b: bpy.props.FloatProperty(default=.1) # base
+    h: bpy.props.FloatProperty(default=.1) # height
 
     object: bpy.props.PointerProperty(type=Object)
 
     # Setup for drop down list
     drop_down_items = (
-        ('CYL', "Cylinder", "Add the 2 values together"),
-        ('HCYL', "Hollow Cylinder", "Subtract the second value from the first"),
-        ('BOX', "Box", "Multiply the 2 values together"),
+        ('CYL', "Cylinder", "Solid cylinder"),
+        # ('HCYL', "Hollow Cylinder", "Subtract the second value from the first"),
+        # ('BOX', "Box", "Multiply the 2 values together"),
         # ('HBOX', "Hollow Box", "Divide the second value by the first"),
         # ('IBEAM', "I-Beam", "Divide the second value by the first"),
     )
 
     my_enum_prop: bpy.props.EnumProperty(
-        name = "Operation type",
-        description = "The type of operation that will be used",
+        name = "Bar type",
+        description = "The type of bar that will be used",
         items = drop_down_items,
         default = 'CYL',
     )
@@ -51,12 +51,9 @@ class NodeAreaInput(Node, NodeBase):
         layout.prop(self, "my_enum_prop", text="")
         if self.my_enum_prop == 'CYL':
             layout.prop(self, "r", text="r")
-        if self.my_enum_prop == 'HCYL':
-            layout.prop(self, "r", text="r")
-            layout.prop(self, "t", text="t")
-        if self.my_enum_prop == 'BOX':
-            layout.prop(self, "b", text="r")
-            layout.prop(self, "h", text="t")
+        # if self.my_enum_prop == 'HCYL':
+        #     layout.prop(self, "r", text="r")
+        #     layout.prop(self, "t", text="t")
 
         # self.eval()
         # col = layout.column()
@@ -64,26 +61,24 @@ class NodeAreaInput(Node, NodeBase):
         pass
 
     def get_object(self):
-        print(self.object)
         return self.object
 
     def update_value(self, context):
         print("updated")
 
     def eval(self):
+        # take input type and solve for material properties
         if self.my_enum_prop == 'CYL':
-            A = math.pi * self.r
-            Iz = (math.pi / 4) * self.r ** 4
-            Iy = (math.pi / 4) * self.r ** 4
-            J = (math.pi / 2) * self.r ** 4
-        if self.my_enum_prop == 'HCYL':
-            A = 2 * math.pi * self.r * self.t
-            Iz = math.pi * self.r ** 3 * self.t
-            Iy = math.pi * self.r ** 3 * self.t
-            J = 2 * math.pi * self.r ** 3 * self.t
-        if self.my_enum_prop == 'BOX':
-            A = self.b * self.h
-            Iz = (self.b * self.h ** 3) / 12
-            Iy = (self.h * self.b ** 3) / 12
-            J = self.h * self.b ** 3 # check this equation
-        return [A, Iz, Iy, J]
+            A = math.pi * self.r # Area
+            Iz = (math.pi / 4) * self.r ** 4 # Area moment of inertia z axis
+            Iy = (math.pi / 4) * self.r ** 4 # Area moment of inertia y axis
+            J = (math.pi / 2) * self.r ** 4 # Torsion constant
+            h = self.r * 2 # height
+        
+        # if self.my_enum_prop == 'HCYL':
+        #     A = 2 * math.pi * self.r * self.t
+        #     Iz = math.pi * self.r ** 3 * self.t
+        #     Iy = math.pi * self.r ** 3 * self.t
+        #     J = 2 * math.pi * self.r ** 3 * self.t
+        
+        return [A, J, Iy, Iz, h, self.my_enum_prop]

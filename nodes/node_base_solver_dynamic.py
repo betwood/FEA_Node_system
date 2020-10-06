@@ -17,7 +17,11 @@ from .node_base import NodeBase
 DEBUG = False
 TIME = True
 
-class NodeSolverBase(NodeBase):
+class NodeDynamicSolverBase(NodeBase):
+
+    bl_idname = 'BaseDynamicSolver'
+    # Label for nice name display
+    bl_label = "Base Dynamic Solver"
 
     solver_type: bpy.props.StringProperty(default="")
     E: bpy.props.FloatProperty(default=21000000)
@@ -26,6 +30,16 @@ class NodeSolverBase(NodeBase):
     Iy: bpy.props.FloatProperty(default=1000)
     Iz: bpy.props.FloatProperty(default=1000)
     J: bpy.props.FloatProperty(default=1000)
+    object: bpy.props.PointerProperty(type=Object)
+    solver_type: bpy.props.StringProperty(default="1DFRAME")
+    disp: bpy.props.StringProperty(default="")
+    rho: bpy.props.FloatProperty(default=.1)
+    num_t: bpy.props.IntProperty(default=20)
+    dt: bpy.props.FloatProperty(default=.1)
+    d0: bpy.props.FloatProperty(default=0)
+    v0: bpy.props.FloatProperty(default=0)
+    b: bpy.props.FloatProperty(default=1/6, min=0, max=1/2)
+    g: bpy.props.FloatProperty(default=1/2)
 
     # setup for drop down list
     drop_down_items = (
@@ -55,8 +69,21 @@ class NodeSolverBase(NodeBase):
         update=NodeBase.update_value,
     )
 
+    drop_down_items_3 = (
+        ('IMPULSE', "Impulse", "Force only at first time interval"),
+        ('CONSTANT', "Constant", "Force over entire time interval"),
+    )
+
+    force_input: bpy.props.EnumProperty(
+        name = "Force type",
+        description = "The force type",
+        items = drop_down_items_3,
+        default = 'IMPULSE',
+        update=NodeBase.update_value,
+    )
+
     # setup for drop down list
-    buffer: bpy.props.BoolProperty(default=False)
+    buffer: bpy.props.BoolProperty(default=True)
 
 
     def draw_buttons(self, context, layout):
@@ -78,9 +105,19 @@ class NodeSolverBase(NodeBase):
         layout.label(text="Area input type:")
         layout.prop(self, "size_input", text="")
 
+        layout.label(text="Force input type:")
+        layout.prop(self, "force_input", text="")
+
         layout.label(text="Keeps previous results if checked:")
         layout.prop(self, "buffer", text="Buffer")
         
+        layout.label(text="Dynamic solve properties:")
+        layout.prop(self, "rho", text="density") # needs to be added to material
+        layout.prop(self, "num_t", text="number of time steps")
+        layout.prop(self, "dt", text="time step")
+        layout.prop(self, "b", text="dynamic solve parameter")
+        layout.prop(self, "g", text="dynamic solve parameter")
+
         super().draw_buttons_ext(context, layout)
 
     def update_value(self, context):
@@ -91,7 +128,7 @@ class NodeSolverBase(NodeBase):
         input_object = self.inputs["Object"]
         self.object = self.get_value(input_object)
         self.solve_type = self.solver_type
-        print(self.object)
+
         for input in self.inputs:
             if input.is_linked:
                 self.set_object(input, self.object, "in", self.solve_type)
@@ -101,29 +138,15 @@ class NodeSolverBase(NodeBase):
             if output.is_linked:
                 self.set_object(output, self.object, "out", self.solve_type)
                 if DEBUG: print(output)
-        # self.get_object()
+
+    def get_force(self, F, f):
+        if self.force_input == "IMPULSE":
+            f[:, 0] = F[:, 0]
+        if self.force_input == "CONSTANT":
+            for i in range(self.num_t):
+                f[:, i] = F[:, 0]
+        return f
 
 
     def eval(self):
         pass
-
-    def set_color(self):
-        if self.buffer == True:
-            self.color = (0, 0, 0)
-        else:
-            self.color = (1, 1, 1)
-
-class UpdateObjectNodeOperator(Operator):
-    """Add a simple box mesh"""
-    bl_idname = "node.object_update"
-    bl_label = "update object node tree"
-
-    # node_group_name = StringProperty()
-
-    node = None
-
-    def execute(self, context):
-        # node = [i for i in bpy.data.node_groups[bpy.context.space_data.node_tree.name].nodes if i.bl_idname == "Outputnode"][0]
-        node = context.active_node
-        node.update_object()
-        return{'FINISHED'}
