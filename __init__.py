@@ -41,32 +41,6 @@ auto_load.init()
 import bpy
 import subprocess
 
-py_exec = bpy.app.binary_path_python
-# ensure pip is installed
-subprocess.call([
-    str(py_exec),
-    "-m",
-    "ensurepip",
-    "--user"
-])
-# update pip
-subprocess.call([
-    str(py_exec),
-    "-m",
-    "pip",
-    "install",
-    "--upgrade",
-    "pip"
-])
-# install packages
-subprocess.call([
-    str(py_exec),
-    "-m",
-    "pip",
-    "install",
-    "scipy",
-    "-t .",
-])
 
 class MyNodeCategory(NodeCategory):
     @classmethod
@@ -117,8 +91,36 @@ node_categories = [
 
 
 def register():
+    py_exec = bpy.app.binary_path_python
+    # ensure pip is installed
+    subprocess.call([
+        str(py_exec),
+        "-m",
+        "ensurepip",
+        "--user"
+    ])
+    # update pip
+    subprocess.call([
+        str(py_exec),
+        "-m",
+        "pip",
+        "install",
+        "--upgrade",
+        "pip"
+    ])
+    # install packages
+    subprocess.call([
+        str(py_exec),
+        "-m",
+        "pip",
+        "install",
+        "scipy",
+        "-t .",
+    ])
+
     auto_load.register()
     nodeitems_utils.register_node_categories('FEA_NODES_categories', node_categories)
+
 
 def unregister():
     auto_load.unregister()
