@@ -38,6 +38,36 @@ from nodeitems_utils import NodeCategory, NodeItem
 
 auto_load.init()
 
+import bpy
+import subprocess
+
+py_exec = bpy.app.binary_path_python
+# ensure pip is installed
+subprocess.call([
+    str(py_exec),
+    "-m",
+    "ensurepip",
+    "--user"
+])
+# update pip
+subprocess.call([
+    str(py_exec),
+    "-m",
+    "pip",
+    "install",
+    "--upgrade",
+    "pip"
+])
+# install packages
+subprocess.call([
+    str(py_exec),
+    "-m",
+    "pip",
+    "install",
+    "scipy",
+    "-t .",
+])
+
 class MyNodeCategory(NodeCategory):
     @classmethod
     def poll(cls, context):
