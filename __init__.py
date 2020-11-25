@@ -38,32 +38,45 @@ from nodeitems_utils import NodeCategory, NodeItem
 import bpy
 import subprocess
 
-py_exec = bpy.app.binary_path_python
-# ensure pip is installed
-subprocess.call([
-    str(py_exec),
-    "-m",
-    "ensurepip",
-    "--user"
-])
-# update pip
-subprocess.call([
-    str(py_exec),
-    "-m",
-    "pip",
-    "install",
-    "--upgrade",
-    "pip"
-])
-# install packages
-subprocess.call([
-    str(py_exec),
-    "-m",
-    "pip",
-    "install",
-    "scipy",
-    "-t .",
-])
+import importlib.util
+
+# For illustrative purposes.
+package_name = 'scipy'
+
+spec = importlib.util.find_spec(package_name)
+if spec is None:
+    print(package_name +" is not installed")
+    py_exec = bpy.app.binary_path_python
+    # ensure pip is installed
+    subprocess.call([
+        str(py_exec),
+        "-m",
+        "ensurepip",
+        "--user"
+    ])
+    # update pip
+    subprocess.call([
+        str(py_exec),
+        "-m",
+        "pip",
+        "install",
+        "--upgrade",
+        "pip"
+    ])
+    # install packages
+    subprocess.call([
+        str(py_exec),
+        "-m",
+        "pip",
+        "install",
+        "scipy",
+        "-t .",
+    ])
+
+else:
+    print(package_name + " is installed")
+
+
 
 auto_load.init()
 
