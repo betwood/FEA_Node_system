@@ -21,8 +21,8 @@ class NodeBase:
     # These work just like custom properties in ID data blocks
     # Extensive information can be found under
     # http://wiki.blender.org/index.php/Doc:2.6/Manual/Extensions/Python/Properties
-    object: bpy.props.PointerProperty(type=bpy.types.Object)
-    solve_type: bpy.props.StringProperty(default="test")
+    object: bpy.props.PointerProperty(type=bpy.types.Object) # object operation is being run on
+    solve_type: bpy.props.StringProperty(default="test") # used for 
 
     # === Optional Functions ===
     # Initialization function, called when a new node is created.
@@ -64,40 +64,47 @@ class NodeBase:
         pass
 
     def get_value(self, socket, type="default"):
+        
+        # gets value from socket if linked gets it from the node otherwise gets the socket default value
         if not socket.is_linked:
             val = socket.default_value
         else:
             val = socket.links[0].from_node.eval()
-            # if not type == "matrix":
-            #     socket.links[0].from_node.eval()
-            #     val = socket.links[0].from_socket.default_value
-            # else:
                 
         return val
 
     def set_object(self, socket, object, type, solve_type):
+        # takes the input nodes and sets object and solve type on them
         if type == "in":
+            
+            # get object and solve type from link
             from_node = socket.links[0].from_node
             from_node.object = object
             from_node.solve_type = solve_type
             
+            # take inputs and send object and solve type to these nodes
             for input in self.inputs:
-                print(input)
-                if input.is_linked:
+                if input.is_linked: # check if input socket is connected to another node
                     from_node.set_object(input, self.object, "in", self.solve_type)
         
+        # take the output nodes and set objects and solve type
         if type == "out":
-            to_node = socket.links[0].to_node
-            to_node.object = object
-            to_node.solve_type = solve_type
-            
-            for output in self.outputs:
-                if output.is_linked:
-                    to_node.set_object(output, self.object, "out", self.solve_type)
+            for link in socket.links:
+                
+                # get object and solve type from node
+                to_node = link.to_node
+                to_node.object = object
+                to_node.solve_type = solve_type
+
+                # send object and solve type to output nodes
+                for output in self.outputs:
+                    if output.is_linked:
+                        to_node.set_object(output, self.object, "out", self.solve_type)
 
     def update_value(self, context):
         self.set_inputs()
         return None
 
     def set_inputs(self):
-        print("1")
+        # print("1")
+        pass

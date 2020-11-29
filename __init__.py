@@ -11,12 +11,21 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+# Sources used:
+# http://what-when-how.com/the-finite-element-method/
+# https://en.wikipedia.org/wiki/List_of_second_moments_of_area
+# A first course in the finite element method by Daryl L. Logan (fourth edition)
+# MATLAB guide to finite elements an interactive approach by Peter Kattan (second edition)
+# Development of Membrane, Plate and Flat Shell Elements in Java by Kaushalkumar Kansara
+# Schuster Engineering youtube channel FEA course playlist
+
+
 bl_info = {
     "name" : "FEA_nodes",
     "author" : "Ben Wood",
     "description" : "",
     "blender" : (2, 80, 0),
-    "version" : (0, 0, 1),
+    "version" : (1, 0, 0),
     "location" : "",
     "warning" : "",
     "category" : "Generic"
@@ -26,8 +35,53 @@ bl_info = {
 from . import auto_load
 import nodeitems_utils
 from nodeitems_utils import NodeCategory, NodeItem
+import bpy
+import subprocess
+
+import importlib.util
+
+# For illustrative purposes.
+package_name = 'scipy'
+
+spec = importlib.util.find_spec(package_name)
+if spec is None:
+    print(package_name +" is not installed")
+    py_exec = bpy.app.binary_path_python
+    # ensure pip is installed
+    subprocess.call([
+        str(py_exec),
+        "-m",
+        "ensurepip",
+        "--user"
+    ])
+    # update pip
+    subprocess.call([
+        str(py_exec),
+        "-m",
+        "pip",
+        "install",
+        "--upgrade",
+        "pip"
+    ])
+    # install packages
+    subprocess.call([
+        str(py_exec),
+        "-m",
+        "pip",
+        "install",
+        "scipy",
+        "-t .",
+    ])
+
+else:
+    print(package_name + " is installed")
+
+
 
 auto_load.init()
+
+
+
 
 class MyNodeCategory(NodeCategory):
     @classmethod
@@ -71,13 +125,18 @@ node_categories = [
         NodeItem("SpaceTrussNode"),
         NodeItem("SpaceFrameNode"),
         NodeItem("PlaneTrussNodeDynamic"),
+        NodeItem("SpaceTrussNodeDynamic"),
+        NodeItem("SpaceFrameNodeDynamic"),
     ]),
 ]
 
 
 def register():
+    
+
     auto_load.register()
     nodeitems_utils.register_node_categories('FEA_NODES_categories', node_categories)
+
 
 def unregister():
     auto_load.unregister()
