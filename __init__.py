@@ -119,6 +119,7 @@ node_categories = [
         NodeItem("OutputVertexColorNode"),
         NodeItem("OutputGeneric"),
         NodeItem("OutputNode"),
+        NodeItem("OutputValueNode")
     ]),
     # solvers
     MyNodeCategory('SOLVERS', "solvers", items=[
@@ -127,6 +128,8 @@ node_categories = [
         NodeItem("PlaneTrussNodeDynamic"),
         NodeItem("SpaceTrussNodeDynamic"),
         NodeItem("SpaceFrameNodeDynamic"),
+        NodeItem("TriShellNode"),
+        NodeItem("QuadShellNode"),
     ]),
 ]
 

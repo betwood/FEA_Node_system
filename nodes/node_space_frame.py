@@ -261,15 +261,18 @@ class NodeSpaceFrame(Node, NodeSolverBase):
             # column 3 = y moment of inertia
             # column 4 = z moment of inertia
             # column 5 = J
-        edge_matrix = [0,0,0]
+        edge_matrix = np.zeros((12), dtype=int)
         properties = [0,0,0,0,0,0]
         new_row_1 = edge_matrix
         new_row_2 = properties
         i = 0
         for edge in bm.edges:
-            new_row_1[0] = edge.index
-            new_row_1[1] = edge.verts[0].index
-            new_row_1[2] = edge.verts[1].index
+            for i in range(12):
+                if i < 6:
+                    new_row_1[i] = edge.verts[0].index
+                else:
+                    new_row_1[i] = edge.verts[1].index
+
             new_row_2[0] = E
             new_row_2[1] = A
             new_row_2[2] = G
@@ -280,29 +283,50 @@ class NodeSpaceFrame(Node, NodeSolverBase):
             edge_matrix = np.vstack([edge_matrix, new_row_1])
             properties = np.vstack([properties, new_row_2])
             i += 1
-        edge_matrix = np.delete(edge_matrix, 0, 0)
+        edge_matrix = np.delete(edge_matrix, 0, 0) # find better way to initialize (redundant)
         properties = np.delete(properties, 0, 0)
         if DEBUG: print('edge_matrix',edge_matrix)
         if DEBUG: print('properties',properties)
+        print(edge_matrix.shape)
         max = (edge_matrix[:,1:].max() + 1) * 6
         if DEBUG: print(max)
 
-        # create stiffness matrix
-        k = np.zeros((len(edge_matrix),12,12))
-        bm.edges.ensure_lookup_table()
-        for i in range(len(edge_matrix)):
-            k[i, :, :]=self.SpaceTrussElementStiffness(properties[i, 0],properties[i, 1],properties[i, 2],properties[i, 3],properties[i, 4],properties[i, 5], bm.edges[i].verts[0].co, bm.edges[i].verts[1].co)
-        if DEBUG: print(k.shape)
 
-        # create global stiffness matrix
-        if TIME: assem_start = timer()
+        bm.edges.ensure_lookup_table()
+        # k = np.zeros((12,12))
         K=np.zeros((max,max))
-        for i in range(len(edge_matrix)):        
-            K=self.SpaceTrussAssemble(K,k[i, :, :],edge_matrix[i,1],edge_matrix[i,2])
-        if TIME: assem_end = timer()
-        print("space truss assemble", assem_end - assem_start)
-        # print("shape:", K.shape)
-        # print("K", K)
+        for e in range(len(edge_matrix)):
+            # print(e)
+            k = self.SpaceTrussElementStiffness(properties[e, 0],properties[e, 1],properties[e, 2],properties[e, 3],properties[e, 4],properties[e, 5], bm.edges[e].verts[0].co, bm.edges[e].verts[1].co)
+            # print(k)
+
+            K= self.SpaceTrussAssemble(K, k, edge_matrix[e,0], edge_matrix[e,6])
+
+            # for i in range(12):
+            #     for j in range(12):
+            #         pass
+
+        # print("global:")
+        # print(K)
+
+        # print(edge_matrix)
+
+        # # create stiffness matrix
+        # k = np.zeros((len(edge_matrix),12,12))
+        # bm.edges.ensure_lookup_table()
+        # for i in range(len(edge_matrix)):
+        #     k[i, :, :]=self.SpaceTrussElementStiffness(properties[i, 0],properties[i, 1],properties[i, 2],properties[i, 3],properties[i, 4],properties[i, 5], bm.edges[i].verts[0].co, bm.edges[i].verts[1].co)
+        # if DEBUG: print(k.shape)
+
+        # # create global stiffness matrix
+        # if TIME: assem_start = timer()
+        # K=np.zeros((max,max))
+        # for i in range(len(edge_matrix)):        
+        #     K=self.SpaceTrussAssemble(K,k[i, :, :],edge_matrix[i,1],edge_matrix[i,2])
+        # if TIME: assem_end = timer()
+        # print("space truss assemble", assem_end - assem_start)
+        # # print("shape:", K.shape)
+        # # print("K", K)
 
         bool = ((self.get_value(input_socket_10)))
         bool = np.invert(bool)
@@ -341,6 +365,9 @@ class NodeSpaceFrame(Node, NodeSolverBase):
             if bool[i] == 1:
                 U[i] = u[j]
                 j = j + 1
+
+        # print("U")
+        # print(U)
 
         if DEBUG: print(U)
         if TIME: end = timer()
