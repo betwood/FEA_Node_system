@@ -130,6 +130,7 @@ node_categories = [
         NodeItem("SpaceFrameNodeDynamic"),
         NodeItem("TriShellNode"),
         NodeItem("QuadShellNode"),
+        NodeItem("QuadBilinearNode"),
     ]),
 ]
 

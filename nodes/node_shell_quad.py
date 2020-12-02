@@ -492,6 +492,7 @@ class NodeShellQuad(Node, NodeSolverBase):
         # print(kcst)
         # print(kdkt)
         k = np.zeros((18, 18))
+        # look into 3 X 3 nature
         for i in range(3):
             for j in range(3):
                 k[i * 6, j * 6] += kcst[i * 2, j * 2]

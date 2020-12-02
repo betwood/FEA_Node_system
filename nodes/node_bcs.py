@@ -77,7 +77,7 @@ class BCInput(Node, NodeBase):
         vertices = [v for v in self.object.data.vertices if gi in [ vg.group for vg in v.groups]]
         
         for v in self.object.data.vertices:
-            print(v.groups)
+            # print(v.groups)
             for g in v.groups:
                 if g.group == gi:
                     # any vertex that is a fixed boundary condition is set to 1
