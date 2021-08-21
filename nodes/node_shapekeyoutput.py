@@ -68,6 +68,8 @@ class NodeShapekeyOutput(Node, NodeBase):
         #apply to mesh
         for j in range(0, U.shape[1]):
             # adds new shape key if none exist
+            test = self.sk_index + j
+            test1 = len(self.object.data.shape_keys.key_blocks)
             if self.sk_index + j >= len(self.object.data.shape_keys.key_blocks):
                 self.object.shape_key_add(from_mix=False)
 
