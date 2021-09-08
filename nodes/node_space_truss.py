@@ -52,7 +52,9 @@ class NodeSpaceTruss(Node, NodeBase):
         # self.eval()
         # col = layout.column()
         # col.prop_search(self, "object", context.scene, "objects")
-        pass
+        super().draw_buttons(context, layout)
+        if(bpy.context.active_node == self):
+            layout.operator("node.object_update", text="update objects")
 
     def draw_buttons_ext(self, context, layout):
         super().draw_buttons_ext(context, layout)
@@ -153,7 +155,7 @@ class NodeSpaceTruss(Node, NodeBase):
         self.object = self.get_value(input_socket_3, "object")
         object = self.object
         ob = object.data
-        print(ob)
+        # print(ob)
 
         
 
@@ -215,9 +217,9 @@ class NodeSpaceTruss(Node, NodeBase):
         bool = np.invert(bool)
         
         F = self.get_value(input_socket_5)
-        print("Force:", F)
+        # print("Force:", F)
         bool = np.ravel(bool)
-        print("bool after", bool)
+        # print("bool after", bool)
         if DEBUG: print(bool.shape)
         boolv,boolh = np.ix_(bool, bool)
         if DEBUG: print(boolv)

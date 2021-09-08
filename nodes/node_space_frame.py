@@ -29,10 +29,10 @@ class NodeSpaceFrame(Node, NodeSolverBase):
     E: bpy.props.FloatProperty(default=21000000)
     A: bpy.props.FloatProperty(default=.1)
     G: bpy.props.FloatProperty(default=10000)
-    Ix: bpy.props.FloatProperty(default=1000)
-    Iy: bpy.props.FloatProperty(default=1000)
-    Iz: bpy.props.FloatProperty(default=1000)
-    J: bpy.props.FloatProperty(default=1000)
+    Ix: bpy.props.FloatProperty(default=.0001)
+    Iy: bpy.props.FloatProperty(default=.0001)
+    Iz: bpy.props.FloatProperty(default=.0001)
+    J: bpy.props.FloatProperty(default=.0001)
     object: bpy.props.PointerProperty(type=Object)
     solver_type: bpy.props.StringProperty(default="1DFRAME")
     disp: bpy.props.StringProperty(default="")
@@ -56,7 +56,7 @@ class NodeSpaceFrame(Node, NodeSolverBase):
 
 
     def draw_buttons(self, context, layout):
-        pass
+        super().draw_buttons(context, layout)
 
     def set_inputs(self):
         if self.material_input == "VALUE":

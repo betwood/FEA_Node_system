@@ -37,7 +37,7 @@ class NodeMaterialInput(Node, NodeBase):
     
     
     def init(self, context):
-        self.outputs.new('SocketTypeMatrix', "Value")
+        self.outputs.new('SocketTypeMatrix', "Material")
 
 
     def draw_buttons(self, context, layout):

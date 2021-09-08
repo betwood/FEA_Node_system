@@ -18,6 +18,10 @@
 # MATLAB guide to finite elements an interactive approach by Peter Kattan (second edition)
 # Development of Membrane, Plate and Flat Shell Elements in Java by Kaushalkumar Kansara
 # Schuster Engineering youtube channel FEA course playlist
+# An optimized method for calculating the linear and nonlinear response of SDOF system subjected to an arbitrary base excitation by Hossein Kabir and Mojtaba Sadeghi
+# Dynamics of structures by Chopra
+# MIT open courseware nonlinear analysis
+# Finite element procedures by Bathe
 
 
 bl_info = {
@@ -255,10 +259,10 @@ node_categories = [
     # outputs
     MyNodeCategory('OUTPUTS', "outputs", items=[
         NodeItem("OutputShapekeyNode"),
-        NodeItem("OutputVertexColorNode"),
+        # NodeItem("OutputVertexColorNode"),
         NodeItem("OutputGeneric"),
-        NodeItem("OutputNode"),
-        NodeItem("OutputValueNode")
+        #NodeItem("OutputNode"),
+        # NodeItem("OutputValueNode")
     ]),
     # solvers
     MyNodeCategory('SOLVERS', "solvers", items=[
@@ -267,10 +271,10 @@ node_categories = [
         NodeItem("PlaneTrussNodeDynamic"),
         NodeItem("SpaceTrussNodeDynamic"),
         NodeItem("SpaceFrameNodeDynamic"),
-        NodeItem("TriShellNode"),
-        NodeItem("QuadShellNode"),
+        # NodeItem("TriShellNode"),
+        # NodeItem("QuadShellNode"),
         NodeItem("QuadBilinearNode"),
-        NodeItem("BilinearQuadContact")
+        # NodeItem("BilinearQuadContact")
     ]),
 ]
 

@@ -61,7 +61,7 @@ class NodeBilinearQuadContact(Node, NodeDynamicSolverBase):
         # self.set_inputs()
 
     def draw_buttons(self, context, layout):
-        pass
+        super().draw_buttons(context, layout)
 
     def draw_buttons_ext(self, context, layout):
         super().draw_buttons_ext(context, layout)

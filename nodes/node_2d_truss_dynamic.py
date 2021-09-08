@@ -23,7 +23,7 @@ class NodePlaneTrussDynamic(Node, NodeDynamicSolverBase):
     # Optional identifier string. If not explicitly defined, the python class name is used.
     bl_idname = 'PlaneTrussNodeDynamic'
     # Label for nice name display
-    bl_label = "Plane Truss node Dynamic"
+    bl_label = "Nonlinear Plane Truss"
 
     # Setup for drop down list
     # drop_down_items = (
@@ -73,11 +73,7 @@ class NodePlaneTrussDynamic(Node, NodeDynamicSolverBase):
 
 
     def draw_buttons(self, context, layout):
-        # layout.prop(self, "my_enum_prop", text="")
-        # self.eval()
-        # col = layout.column()
-        # col.prop_search(self, "object", context.scene, "objects")
-        pass
+        super().draw_buttons(context, layout)
 
     def draw_buttons_ext(self, context, layout):
         super().draw_buttons_ext(context, layout)

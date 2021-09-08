@@ -108,3 +108,4 @@ class NodeBase:
     def set_inputs(self):
         # print("1")
         pass
+

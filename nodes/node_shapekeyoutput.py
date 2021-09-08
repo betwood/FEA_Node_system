@@ -28,6 +28,8 @@ class NodeShapekeyOutput(Node, NodeBase):
 
 
     def draw_buttons(self, context, layout):
+        if(bpy.context.active_node == self):
+            layout.operator("node.evaluate", text="evaluate")
         layout.prop(self, "sk_index", text="shape key index")
         layout.prop(self, "mult", text="multiplier")
         # self.eval()
@@ -56,6 +58,9 @@ class NodeShapekeyOutput(Node, NodeBase):
         U *= self.mult
         # print(U)
 
+        if(self.object.data.shape_keys == None):
+            self.object.shape_key_add(from_mix=False)
+
         # get basis shape key
         self.object.active_shape_key_index = 0
         sk_basis = self.object.active_shape_key
@@ -70,7 +75,7 @@ class NodeShapekeyOutput(Node, NodeBase):
             # adds new shape key if none exist
             test = self.sk_index + j
             test1 = len(self.object.data.shape_keys.key_blocks)
-            if self.sk_index + j >= len(self.object.data.shape_keys.key_blocks):
+            while self.sk_index + j >= len(self.object.data.shape_keys.key_blocks):
                 self.object.shape_key_add(from_mix=False)
 
             # selects shape key

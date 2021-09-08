@@ -28,6 +28,8 @@ class NodeOutput(Node, NodeBase):
 
 
     def draw_buttons(self, context, layout):
+        if(bpy.context.active_node == self):
+            layout.operator("node.evaluate", text="evaluate")
         layout.label(text=self.output)
         # self.eval()
         # col = layout.column()

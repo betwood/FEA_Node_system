@@ -60,11 +60,12 @@ class NodeSolverBase(NodeBase):
 
 
     def draw_buttons(self, context, layout):
+        if(bpy.context.active_node == self):
+            layout.operator("node.object_update", text="update objects")
         # layout.prop(self, "my_enum_prop", text="")
         # self.eval()
         # col = layout.column()
         # col.prop_search(self, "object", context.scene, "objects")
-        pass
 
 
 
@@ -73,7 +74,7 @@ class NodeSolverBase(NodeBase):
         layout.operator("node.object_update", text="update objects")
 
         layout.label(text="Material input type:")
-        layout.operator("node.test", text="TEST")
+        # layout.operator("node.test", text="TEST")
         layout.prop(self, "material_input", text="")
 
         layout.label(text="Area input type:")
@@ -144,6 +145,6 @@ class TestNodeOperator(Operator):
 
     def execute(self, context):
         # node = [i for i in bpy.data.node_groups[bpy.context.space_data.node_tree.name].nodes if i.bl_idname == "Outputnode"][0]
-        node = context.active_node
+        # node = context.active_node
         node.test()
         return{'FINISHED'}

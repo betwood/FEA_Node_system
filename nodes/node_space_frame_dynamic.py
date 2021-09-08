@@ -67,7 +67,7 @@ class NodeSpaceFrameDynamic(Node, NodeDynamicSolverBase):
 
 
     def draw_buttons(self, context, layout):
-        pass
+        super().draw_buttons(context, layout)
 
     def set_inputs(self):
         if self.material_input == "VALUE":

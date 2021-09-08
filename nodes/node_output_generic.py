@@ -44,6 +44,8 @@ class NodeGenericOutput(Node, NodeBase):
 
 
     def draw_buttons(self, context, layout):
+        if(bpy.context.active_node == self):
+            layout.operator("node.evaluate", text="evaluate")
         layout.prop(self, "output_type", text="")
         layout.prop(self, "sk_index", text="shape key index")
         layout.prop(self, "vc_index", text="vertex color index")

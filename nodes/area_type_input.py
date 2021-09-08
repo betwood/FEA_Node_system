@@ -44,7 +44,7 @@ class NodeAreaInput(Node, NodeBase):
     
     
     def init(self, context):
-        self.outputs.new('SocketTypeMatrix', "Value")
+        self.outputs.new('SocketTypeMatrix', "A_mat")
 
 
     def draw_buttons(self, context, layout):

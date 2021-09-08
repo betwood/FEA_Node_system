@@ -47,7 +47,7 @@ class NodeSpaceTrussDynamic(Node, NodeDynamicSolverBase):
         # self.eval()
         # col = layout.column()
         # col.prop_search(self, "object", context.scene, "objects")
-        pass
+        super().draw_buttons(context, layout)
 
     def draw_buttons_ext(self, context, layout):
         super().draw_buttons_ext(context, layout)

@@ -87,11 +87,9 @@ class NodeDynamicSolverBase(NodeBase):
 
 
     def draw_buttons(self, context, layout):
-        # layout.prop(self, "my_enum_prop", text="")
-        # self.eval()
-        # col = layout.column()
-        # col.prop_search(self, "object", context.scene, "objects")
-        pass
+        if(bpy.context.active_node == self):
+            op = layout.operator("node.object_update", text="update objects")
+        # op.node = 1
 
 
 

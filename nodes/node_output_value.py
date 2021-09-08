@@ -43,6 +43,8 @@ class NodeValueOutput(Node, NodeBase):
 
 
     def draw_buttons(self, context, layout):
+        if(bpy.context.active_node == self):
+            layout.operator("node.evaluate", text="evaluate")
         layout.prop(self, "output_type", text="")
         layout.prop(self, "vertex", text="vertex index")
         layout.label(text=str(self.x))
