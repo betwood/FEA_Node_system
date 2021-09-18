@@ -32,7 +32,7 @@ class BCInput(Node, NodeBase):
     
     
     def init(self, context):
-        self.outputs.new('SocketTypeMatrix', "boundary conditions")
+        self.outputs.new('SocketTypeMatrix', "Boundary conditions")
 
 
     def draw_buttons(self, context, layout):

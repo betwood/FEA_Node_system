@@ -29,8 +29,8 @@ bl_info = {
     "author" : "Ben Wood",
     "description" : "",
     "blender" : (2, 93, 0),
-    "version" : (1, 0, 0),
-    "location" : "",
+    "version" : (0, 2, 0),
+    "location" : "Editor Type > FEA nodes",
     "warning" : "Requires installation of dependencies (scipy)",
     "category" : "Generic"
 }
@@ -46,12 +46,11 @@ import subprocess
 import importlib
 from collections import namedtuple
 
+
+# Create dependencies for external module imports. put in the module name that needs to be imported package and name are none
+# if same as module name
 Dependency = namedtuple("Dependency", ["module", "package", "name"])
 
-# Declare all modules that this add-on depends on, that may need to be installed. The package and (global) name can be
-# set to None, if they are equal to the module name. See import_module and ensure_and_import_module for the explanation
-# of the arguments. DO NOT use this to import other parts of your Python add-on, import them as usual with an
-# "import" statement.
 dependencies = (Dependency(module="scipy", package=None, name=None),)
 
 dependencies_installed = False
@@ -61,9 +60,7 @@ def import_module(module_name, global_name=None, reload=True):
     """
     Import a module.
     :param module_name: Module to import.
-    :param global_name: (Optional) Name under which the module is imported. If None the module_name will be used.
-       This allows to import under a different name with the same effect as e.g. "import numpy as np" where "np" is
-       the global_name under which the module can be accessed.
+    :param global_name: (Optional) Secondary name (similar to import numpy as np)
     :raises: ImportError and ModuleNotFoundError
     """
     if global_name is None:
