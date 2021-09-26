@@ -315,9 +315,10 @@ def unregister():
     for cls in preference_classes:
         bpy.utils.unregister_class(cls)
 
-    bpy.utils.unregister_class(FEA_PT_Panel)
+    
 
     if dependencies_installed:
+        bpy.utils.unregister_class(FEA_PT_Panel)
         auto_load.unregister()
         nodeitems_utils.unregister_node_categories('FEA_NODES_categories')
     
