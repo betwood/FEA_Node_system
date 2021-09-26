@@ -202,8 +202,14 @@ class FEA_OT_install_dependencies(bpy.types.Operator):
         dependencies_installed = True
 
         # Register the panels, operators, etc. since dependencies are installed
-        for cls in classes:
-            bpy.utils.register_class(cls)
+        auto_load.init()
+        auto_load.register()
+        try:
+            nodeitems_utils.register_node_categories('FEA_NODES_categories', node_categories)
+        except:
+            nodeitems_utils.unregister_node_categories('FEA_NODES_categories')
+            nodeitems_utils.register_node_categories('FEA_NODES_categories', node_categories)
+
 
         return {"FINISHED"}
 
