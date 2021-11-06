@@ -248,6 +248,7 @@ node_categories = [
         
         NodeItem("CombineBCSNode"),
         NodeItem("CombineForcesNode"),
+        NodeItem("ContactTesting")
     ]),
     # static nodes
     MyNodeCategory('INPUTS', "inputs", items=[
@@ -264,7 +265,7 @@ node_categories = [
         NodeItem("OutputShapekeyNode"),
         # NodeItem("OutputVertexColorNode"),
         NodeItem("OutputGeneric"),
-        #NodeItem("OutputNode"),
+        NodeItem("OutputNode"),
         # NodeItem("OutputValueNode")
     ]),
     # solvers
@@ -277,7 +278,7 @@ node_categories = [
         # NodeItem("TriShellNode"),
         # NodeItem("QuadShellNode"),
         NodeItem("QuadBilinearNode"),
-        # NodeItem("BilinearQuadContact")
+        NodeItem("BilinearQuadContact")
     ]),
 ]
 
