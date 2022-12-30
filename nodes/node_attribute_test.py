@@ -13,7 +13,6 @@ from .node_output import UpdateObjectNodeOperator
 DEBUG = False
 
 class NodeAttributeOutput(Node, NodeBase):
-
     # Optional identifier string. If not explicitly defined, the python class name is used.
     bl_idname = 'OutputAttributeNode'
     # Label for nice name display

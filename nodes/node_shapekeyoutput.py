@@ -67,7 +67,7 @@ class NodeShapekeyOutput(Node, NodeBase):
 
         # make active shape key the index value and select it
         self.object.active_shape_key_index = self.sk_index
-        sk = self.object.active_shape_key
+        sk = self.object.active_shape_key                         
 
 
         #apply to mesh

@@ -114,6 +114,10 @@ class ContactTesting(Node, NodeBase):
 
 
     def eval(self):
+        self.ContactAlgorithm()
+        x = "success"
+        return x
+        
         bs = .5
 
                 # create bmesh environment
@@ -167,6 +171,105 @@ class ContactTesting(Node, NodeBase):
 
         Sx = (int) (xmax - xmin)/bs + 1
         return xmax
+
+    def ContactAlgorithm(self):
+        gi = self.object1.vertex_groups[self.contact].index
+
+        max = len(self.object1.data.vertices)
+        numVertex = len(self.object1.data.vertices) + len(self.object2.data.vertices)
+        x = np.zeros(numVertex)
+        y = np.zeros(numVertex)
+        z = np.zeros(numVertex)
+        vs = np.zeros((max,1))
+        vs = ((vs == 1))
+        i = 0
+        
+        # gi = self.object.vertex_groups[self.contact].index
+        bm = bmesh.new()
+        bm.from_mesh(self.object1.data)
+
+        for v in bm.verts: #this will need to take already known data to speed up and for multiple iterations
+            # print(v.groups)
+            vertex = self.object1.matrix_world @ v.co
+            x[i] = vertex.x
+            y[i] = vertex.y
+            z[i] = vertex.z
+            # for g in v.groups:
+            #     if g.group == gi:
+            i += 1
+        
+        i = len(self.object1.data.vertices)
+
+        bm = bmesh.new()
+        bm.from_mesh(self.object2.data)
+
+        for v in bm.verts: #this will need to take already known data to speed up and for multiple iterations
+            # print(v.groups)
+            vertex = self.object2.matrix_world @ v.co
+            x[i] = vertex.x
+            y[i] = vertex.y
+            z[i] = vertex.z
+            # for g in v.groups:
+            #     if g.group == gi:
+            i += 1
+
+        # calculate preliminary values
+        Bs = .5 # solve for this base on smallest master surface dimension
+
+        xMax = np.max(x)
+        xMin = np.min(x)
+        yMax = np.max(y)
+        yMin = np.min(y)
+        zMax = np.max(z)
+        zMin = np.min(z)
+
+        Sx = (int)((xMax - xMin) / Bs + 1)
+        Sy = (int)((yMax - yMin) / Bs + 1)
+        Sz = (int)((zMax - zMin) / Bs + 1)
+
+        # step 1: zero nbox
+        nb = Sx * Sy * Sz # calculate number of buckets
+        nbox = np.zeros(nb, dtype=int) #length is number of contact nodes
+        lbox = np.zeros(numVertex,dtype=int)
+
+        # step 2: find bucket id for each node
+        # need to loop over all verticies
+        for i in range(len(x)):
+            Sxi = (int)((x[i]- xMin) / Bs + 1)
+            Syi = (int)((y[i]- yMin) / Bs + 1)
+            Szi = (int)((z[i]- zMin) / Bs + 1)
+
+
+            Bi = (Szi - 1) * Sx * Sy + (Syi - 1) * Sx + Sxi - 1
+            # step 3: store bucket id for node i in lbox
+            lbox[i] = Bi
+
+            # step 4: increment counter for bucket Bi
+            nbox[Bi] += 1
+
+        
+
+        # step 5: Calculate pointer for each bucket j into sorted list of nodes
+        npoint = np.zeros(nb, dtype=int)
+        npoint[0] = 1
+
+        # loop over all buckets
+        for j in range(nb):
+
+            npoint[j] = npoint[j - 1] + nbox[j - 1]
+
+        # step 6: zero vector nbox
+        nbox = np.zeros(nb, dtype=int)
+
+        # step 7: sort nodes according to their bucket
+        ndsort = np.zeros(len(x), dtype=int)
+        for i in range(len(x)):
+            index = nbox[lbox[i]] + npoint[lbox[i]] - 1
+            ndsort[index] = i
+            nbox[lbox[i]] = nbox[lbox[i]] + 1
+
+        
+        return 
 
 class UpdateContactObjectNodeOperator(Operator):
     """Add a simple box mesh"""

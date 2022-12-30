@@ -23,6 +23,7 @@ class NodeGenericOutput(Node, NodeBase):
     sk_index: bpy.props.IntProperty(min=1, max=10)
     vc_index: bpy.props.IntProperty(min=1, max=6)
     material: bpy.props.PointerProperty(type=bpy.types.Material)
+    #colorAttribute: bpy.props.PointerProperty(type=bpy.types.AttributeGroup)
 
     drop_down_items = (
         ('DISP', "Displacement", "Add the 2 values together"),
@@ -149,12 +150,12 @@ class NodeGenericOutput(Node, NodeBase):
                 sk.data[i].co = sk_basis.data[i].co + mathutils.Vector((U[3*i], U[3*i+1], U[3*i+2]))
         
         # make base vertex color
-        self.object.data.vertex_colors.active_index = 0
-        vc_base = self.object.data.vertex_colors.active
+        self.object.data.attributes.active_index = 0
+        vc_base = self.object.data.attributes.active_color
 
         # make active shape key the index value and select it
-        self.object.data.vertex_colors.active_index = self.vc_index
-        vc = self.object.data.vertex_colors.active
+        self.object.data.attributes.active_color_index = self.vc_index
+        vc = self.object.data.attributes.active_color
 
         if self.solve_type == "1DFRAME":
             disp = np.zeros(int(len(U) / 6))
@@ -186,24 +187,46 @@ class NodeGenericOutput(Node, NodeBase):
         strain = node / connections
 
         i = 0
-        #apply to mesh
-        for poly in self.object.data.polygons:
-            for loop_index in poly.loop_indices:
-                # sk.data[i].co = sk_basis.data[i].co + mathutils.Vector((U[3*i], U[3*i+1], U[3*i+2]))
-                loop = self.object.data.loops[loop_index]
-                v = loop.vertex_index
 
+        for i in range(len(self.object.data.vertices)):
+            if self.solve_type == "1DFRAME":
                 if self.output_type == "DISP":
-                    color_value = disp[v] / self.absmax(disp)
+                    color_value = disp[i] / self.absmax(disp)
                 elif self.output_type == "STRESS":
-                    color_value = disp[v] / self.absmax(disp)
+                    color_value = disp[i] / self.absmax(disp)
                 elif self.output_type == "STRAIN":
-                    color_value = strain[v] / self.absmax(strain)
-                    
+                    color_value = strain[i] / self.absmax(strain)
                 color = (color_value, color_value, color_value, 1.0)
-                vc.data[loop_index].color = color
+                vc.data[i].color = color
+            else:
+                if self.output_type == "DISP":
+                    color_value = disp[i] / self.absmax(disp)
+                elif self.output_type == "STRESS":
+                    color_value = disp[i] / self.absmax(disp)
+                elif self.output_type == "STRAIN":
+                    color_value = strain[i] / self.absmax(strain)
+                color = (color_value, color_value, color_value, 1.0)
+                vc.data[i].color = color
+
+
+        #apply to mesh
+        # for poly in self.object.data.polygons:
+        #     for loop_index in poly.loop_indices:
+        #         # sk.data[i].co = sk_basis.data[i].co + mathutils.Vector((U[3*i], U[3*i+1], U[3*i+2]))
+        #         loop = self.object.data.loops[loop_index]
+        #         v = loop.vertex_index
+
+        #         if self.output_type == "DISP":
+        #             color_value = disp[v] / self.absmax(disp)
+        #         elif self.output_type == "STRESS":
+        #             color_value = disp[v] / self.absmax(disp)
+        #         elif self.output_type == "STRAIN":
+        #             color_value = strain[v] / self.absmax(strain)
+                    
+        #         color = (color_value, color_value, color_value, 1.0)
+        #         vc.data[loop_index].color = color
                 
-                vc_base.data[loop_index].color = (0.0, 0.0, 0.0, 1.0)
+        #         vc_base.data[loop_index].color = (0.0, 0.0, 0.0, 1.0)
         return
 
 class UpdateMaterialNodeOperator(Operator):

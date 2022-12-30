@@ -276,7 +276,7 @@ node_categories = [
         NodeItem("SpaceTrussNodeDynamic"),
         NodeItem("SpaceFrameNodeDynamic"),
         # NodeItem("TriShellNode"),
-        # NodeItem("QuadShellNode"),
+        NodeItem("QuadNode"),
         NodeItem("QuadBilinearNode"),
         NodeItem("BilinearQuadContact")
     ]),
